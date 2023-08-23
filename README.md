@@ -1,2 +1,5 @@
 # combin
-Lightweight implementation of various routines known in combinatorics
+(Planned) Lightweight implementation of various routines known in combinatorics
+
+Under construction! 
+
