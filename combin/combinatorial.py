@@ -3,7 +3,7 @@ from typing import *
 from itertools import * 
 from numbers import Integral
 from math import floor, ceil, comb, factorial
-# import _combinatorial as comb_mod
+import _combinatorial
 from more_itertools import collapse, spy, first_true
 
 ## On the naming convention:
@@ -80,7 +80,11 @@ def comb_unrank_colex(r: int, k: int) -> tuple:
   return tuple(c)
 
 
-def comb_to_rank(C: Iterable[tuple], n: int = None, order: str = ["colex", "lex"]) -> int:
+def comb_to_rank(
+    C: Union[Iterable[tuple], np.ndarray], 
+    n: int = None, 
+    order: str = ["colex", "lex"]
+  ) -> np.ndarray:
   """
   Ranks k-combinations to integer ranks in either lexicographic or colexicographical order
   
@@ -90,14 +94,26 @@ def comb_to_rank(C: Iterable[tuple], n: int = None, order: str = ["colex", "lex"
     order : the bijection to use.
   
   Returns:
-    list : unsigned integers ranks in the chosen order.
+    ndarray : integer ranks of the combinations.
+
+  From: Unranking Small Combinations of a Large Set in Co-Lexicographic Order
   """
-  (el,), C = spy(C) 
-  if order == ["colex", "lex"] or order == "colex":
-    return comb_rank_colex(C) if isinstance(el, Integral) else [comb_rank_colex(c) for c in C]
-  else:
-    assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-    return comb_rank_lex(C, n) if isinstance(el, Integral) else [comb_rank_lex(c, n) for c in C]
+  assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
+  colex_order = (order == ["colex", "lex"] or order == "colex")
+  assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
+  if isinstance(C, np.ndarray) or isinstance(C, Sized):
+    n = 0 if colex_order else n
+    ranks = _combinatorial.rank_combs(C, n, colex_order)
+    return ranks
+
+
+  
+  
+  # if order == ["colex", "lex"] or order == "colex":
+  #   return comb_rank_colex(C) if isinstance(el, Integral) else [comb_rank_colex(c) for c in C]
+  # else:
+  #   assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
+  #   return comb_rank_lex(C, n) if isinstance(el, Integral) else [comb_rank_lex(c, n) for c in C]
 
 def rank_to_comb(R: Iterable[int], k: Union[int, Iterable], n: int = None, order: str = ["colex", "lex"]):
   """
@@ -138,6 +154,7 @@ def rank_to_comb(R: Iterable[int], k: Union[int, Iterable], n: int = None, order
       assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
       return SimplexWrapper((comb_unrank_lex(r, k_) for k_, r in zip(k,R)))
 
+
 def inverse_choose(x: int, k: int):
   """Inverse binomial coefficient (approximately). 
 
@@ -150,7 +167,8 @@ def inverse_choose(x: int, k: int):
 
   https://math.stackexchange.com/questions/103377/how-to-reverse-the-n-choose-k-formula
   """
-  assert k >= 1 and x >= 0, "k must be >= 1" 
+  assert x >= 0, "x must be a non-negative integer" 
+  if k == 0: return(1)
   if k == 1: return(x)
   if k == 2:
     rng = np.arange(np.floor(np.sqrt(2*x)), np.ceil(np.sqrt(2*x)+2) + 1, dtype=np.uint64)

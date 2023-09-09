@@ -1,12 +1,40 @@
 import numpy as np
 from math import comb
-from simplextree.combinatorial import rank_colex, rank_lex, unrank_colex, unrank_lex, rank_combs, unrank_combs, inverse_choose 
 from itertools import combinations
 from functools import partial
+from combin import comb_to_rank, rank_to_comb, inverse_choose, comb_rank_colex
+from combin.combinatorial import _combinatorial
+
+def test_combs():
+  _combinatorial.comb([1,2,3],[1,2,3])
+  _combinatorial.comb([1,2,3],[0,0,0])
+  _combinatorial.comb([1,2,3],[0,0,0])
+
+
+def test_numpy_ranking():
+  n, k = 10, 3
+  combs = np.array(list(combinations(range(n), k)), dtype=np.uint16)
+  assert all(np.equal(comb_to_rank(combs, n, 'lex'), np.arange(120, dtype=np.uint64)))
+  assert all(np.equal(comb_to_rank([tuple(c) for c in combs], n, 'lex'), np.arange(120, dtype=np.uint64)))
+  
+  np.array([comb_rank_colex(c) for c in combs[:5]])
+  np.array([comb_rank_colex(c) for c in np.fliplr(combs)])
+  comb_to_rank(np.fliplr(combs), order='colex')- 1
+  comb_to_rank(combs[:5], order='colex')
+  comb_to_rank(np.fliplr(combs[:5]), order='colex')
+
+  ## Gotta fliplr sorted array since C++ precondition requires it but otherwise it's correct 
+  comb(2,3) + comb(1,2) + comb(0,1)
+  _combinatorial.comb([2,1,0],[3,2,1])
+
+  comb_to_rank(np.fliplr(combs), order='colex')
+
+
+
 
 def test_colex():
   n, k = 10, 3
-  ranks = np.array([rank_colex(c) for c in combinations(range(n), k)])
+  ranks = np.array([comb_to_rank(c) for c in combinations(range(n), k)])
   assert all(np.sort(ranks) == np.arange(comb(n,k))), "Colex ranking is not unique / does not form bijection"
   ranks2 = np.array([rank_colex(reversed(c)) for c in combinations(range(n), k)])
   assert all(ranks == ranks2), "Ranking is not order-invariant"

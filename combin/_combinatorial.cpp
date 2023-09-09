@@ -12,21 +12,56 @@ namespace py = pybind11;
 #include <algorithm>    // std::copy
 using std::vector; 
 
-auto rank_combs(py::array_t< uint16_t > combs, const int n, const int k, bool colex = true) -> py::array_t< uint64_t > {
+auto rank_combs_array(py::array_t< uint16_t, py::array::c_style | py::array::forcecast > combs, const size_t n, bool colex = true) noexcept -> py::array_t< uint64_t > {
   py::buffer_info buffer = combs.request();
   uint16_t* p = static_cast< uint16_t* >(buffer.ptr);
   const size_t N = buffer.size;
+  const size_t k = static_cast< size_t >(combs.shape(1));
   vector< uint64_t > ranks; 
   ranks.reserve(static_cast< uint64_t >(N/k));
   auto out = std::back_inserter(ranks);
 	if (colex) {
-		combinatorial::rank_lex(p, p+N, size_t(n), size_t(k), out);
+		combinatorial::rank_colex(p, p+N, n, k, out);
 	} else {
-		combinatorial::rank_colex(p, p+N, size_t(n), size_t(k), out);
+    combinatorial::rank_lex(p, p+N, n, k, out);
 	}
   return py::cast(ranks); 
 }
 
+// Ranks arbitrarily-sized integer combinations from a list into an array 
+auto rank_combs_list(py::list combs, const size_t n, bool colex = true) -> py::array_t< uint64_t >{
+  std::vector< uint64_t > output_ranks;
+  output_ranks.reserve(combs.size());
+  auto out = std::back_inserter(output_ranks);
+  if (colex) {
+    for (py::handle obj: combs) {
+      auto s = obj.cast< std::vector< uint16_t > >();
+      *out++ = combinatorial::rank_colex_k(s.begin(), s.size());
+    }
+  } else {
+    for (py::handle obj: combs) {
+      auto s = obj.cast< std::vector< uint16_t > >();
+      const size_t k = s.size();
+      const size_t N = combinatorial::BinomialCoefficient< true >(n, k);
+      *out++ = combinatorial::rank_lex_k(s.begin(), n, k, N);
+    }
+	}
+  return py::cast(output_ranks);
+}
+
+
+auto comb(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K) -> py::array_t< uint64_t > {
+  if (N.size() != K.size()){ throw std::invalid_argument("N adn K must match."); }
+  const size_t array_sz = N.size();  
+  auto output_combs = std::vector< uint64_t >();\
+  output_combs.reserve(array_sz);
+  auto out = std::back_inserter(output_combs);
+  auto NA = N.unchecked< 1 >(), KA = K.unchecked< 1 >();
+  for (size_t i = 0; i < array_sz; ++i){
+    *out++ = combinatorial::BinomialCoefficient< true >(NA(i), KA(i));
+  }
+  return py::cast(output_combs);
+}
 // auto unrank_combs(py::array_t< int > ranks, const int n, const int k) -> py::array_t< int > {
 //   py::buffer_info buffer = ranks.request();
 //   int* r = static_cast< int* >(buffer.ptr);
@@ -50,7 +85,9 @@ auto rank_combs(py::array_t< uint16_t > combs, const int n, const int k, bool co
 // Compile: clang -Wall -fPIC -c src/pbsig/combinatorial.cpp -std=c++20 -Iextern/pybind11/include -isystem /Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include -I/Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include/python3.9 
 PYBIND11_MODULE(_combinatorial, m) {
   m.doc() = "Combinatorial module";
-  m.def("rank_combs", &rank_combs);
+  m.def("rank_combs", &rank_combs_array);
+  m.def("rank_combs", &rank_combs_list);
+  m.def("comb", &comb);
   // m.def("unrank_combs", &unrank_combs);
   // m.def("boundary_ranks", &boundary_ranks);
   // m.def("interval_cost", &pairwise_cost);

@@ -4,6 +4,7 @@
 #ifndef COMBINATORIAL_H
 #define COMBINATORIAL_H 
 
+#include <iostream>
 #include <cstdint>		// uint_fast64_t
 #include <array>
 // #include <span> 		 	// span (C++20)
@@ -191,8 +192,8 @@ namespace combinatorial {
 			return static_cast< value_t >(binomial_coeff_(n,std::min(k,n-k)));
 		}
 
+		// Precompute a *larger* table of binomial coefficients
 		void precompute(index_t n, index_t k){
-			// std::cout << "here" << std::endl;
 			pre_n = n;
 			pre_k = k;
 			BT = vector< vector< index_t > >(k + 1, vector< index_t >(n + 1, 0));
@@ -281,12 +282,9 @@ namespace combinatorial {
 	[[nodiscard]]
 	inline index_t rank_lex_k(InputIter s, const size_t n, const size_t k, const index_t N){
 		index_t i = k; 
-		// std::cout << std::endl; 
 	  const index_t index = std::accumulate(s, s+k, 0, [n, &i](index_t val, index_t num){ 
-			// std::cout << BinomialCoefficient((n-1) - num, i) << ", ";
 		  return val + BinomialCoefficient< safe >((n-1) - num, i--); 
 		});
-		// std::cout << std::endl; 
 	  const index_t combinadic = (N-1) - index; // Apply the dual index mapping
 	  return combinadic;
 	}
@@ -324,6 +322,7 @@ namespace combinatorial {
 		// return index; 
 	}
 	
+
 	// Colexicographically rank k-subsets
 	// assumes each k tuple of s is in colex order! 
 	template< bool safe = true, typename InputIter >
@@ -331,13 +330,14 @@ namespace combinatorial {
 	constexpr auto rank_colex_k(InputIter s, const size_t k) noexcept {
 		index_t i = k; 
 		const index_t index = std::accumulate(s, s+k, 0, [&i](index_t val, index_t num){ 
+			std::cout << num << "," << i << std::endl;
 			return val + BinomialCoefficient< safe >(num, i--); 
 		});
 		return index; 
 	}
 
 	template< bool safe = true, typename InputIt, typename OutputIt >
-	inline void rank_colex(InputIt s, const InputIt e, [[maybe_unused]] const size_t n, const size_t k, OutputIt out){
+	inline void rank_colex(InputIt s, const InputIt e, [[maybe_unused]] const size_t n, const size_t k, OutputIt out) noexcept {
 		switch (k){
 			case 2:{
 				for (; s != e; s += k){
@@ -497,13 +497,7 @@ namespace combinatorial {
 		}
 	}
 
-} // namespace combinatorial
-
-
-
-
-	
-
+}; // namespace combinatorial
 
 //   // Lexicographically unrank subsets wrapper
 // 	template< size_t k, typename InputIt, typename Lambda >
