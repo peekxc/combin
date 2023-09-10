@@ -84,6 +84,7 @@
     "*.tcc": "cpp",
     "concepts": "cpp",
     "memory_resource": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "filesystem": "cpp"
   }
 }

@@ -6,41 +6,16 @@ from math import floor, ceil, comb, factorial
 import _combinatorial
 from more_itertools import collapse, spy, first_true
 
-## On the naming convention:
-## SimplexWrapper is a 
-## Also: https://stackoverflow.com/questions/1942328/add-a-member-variable-method-to-a-python-generator
-## See: https://stackoverflow.com/questions/48349929/numpy-convertible-class-that-correctly-converts-to-ndarray-from-inside-a-sequenc
-class SimplexWrapper:
-  ## Precondition: Generator contains containers all of equal length (d)
-  def __init__(self, g: Generator, d: int, dtype = None):
-    self.simplices = g 
-    if d == 0:
-      self.s_dtype = np.uint16 if dtype is None else dtype
-    else:
-      self.s_dtype = (np.uint16, d+1) if dtype is None else (dtype, d+1)
-  
-  def __iter__(self) -> Iterator:
-    # seq = self.simplices if isinstance(self.s_dtype, tuple) else collapse(self.simplices)
-    return iter(self.simplices)
-    # if isinstance(self,self.s_dtype):
-    #   return map(lambda x: np.asarray(x, dtype=self.s_dtype), self.simplices)
-    # else:
-    #   return iter(np.fromiter(collapse(self.simplices), dtype=self.s_dtype))
-
-  def __array__(self) -> np.ndarray:
-    seq = iter(self) if isinstance(self.s_dtype, tuple) else collapse(iter(self))
-    return np.fromiter(seq, dtype=self.s_dtype)
-
-def c2_lex_rank(i: int, j: int, n: int) -> int:
+def _comb2_lex_rank(i: int, j: int, n: int) -> int:
   i, j = (j, i) if j < i else (i, j)
   return(int(n*i - i*(i+1)/2 + j - i - 1))
 
-def c2_lex_unrank(x: int, n: int) -> tuple:
+def _comb2_lex_unrank(x: int, n: int) -> tuple:
   i = int(n - 2 - np.floor(np.sqrt(-8*x + 4*n*(n-1)-7)/2.0 - 0.5))
   j = int(x + i + 1 - n*(n-1)/2 + (n-i)*((n-i)-1)/2)
   return(i,j) 
 
-def comb_unrank_lex(r: int, k: int, n: int):
+def _comb_unrank_lex(r: int, n: int, k: int):
   result = [0]*k
   x = 1
   for i in range(1, k+1):
@@ -51,20 +26,20 @@ def comb_unrank_lex(r: int, k: int, n: int):
     x += 1
   return tuple(result)
 
-def comb_rank_lex(c: Iterable, n: int) -> int:
+def _comb_rank_lex(c: Iterable, n: int) -> int:
   c = tuple(sorted(c))
   k = len(c)
   index = sum([comb(int(n-ci-1),int(k-i)) for i,ci in enumerate(c)])
   #index = sum([comb((n-1)-cc, kk) for cc,kk in zip(c, reversed(range(1, len(c)+1)))])
   return int(comb(n, k) - index - 1)
 
-def comb_rank_colex(c: Iterable) -> int:
+def _comb_rank_colex(c: Iterable) -> int:
   c = tuple(sorted(c))
   k = len(c)
   #return sum([comb(ci, i+1) for i,ci in zip(reversed(range(len(c))), reversed(c))])
   return sum([comb(ci,k-i) for i,ci in enumerate(reversed(c))])
 
-def comb_unrank_colex(r: int, k: int) -> tuple:
+def _comb_unrank_colex(r: int, k: int) -> tuple:
   """
   Unranks a k-combinations rank 'r' back into the original combination in colex order
   
@@ -79,17 +54,18 @@ def comb_unrank_colex(r: int, k: int) -> tuple:
     r -= comb(m-1,i)
   return tuple(c)
 
-
 def comb_to_rank(
     C: Union[Iterable[tuple], np.ndarray], 
+    k: int = None,
     n: int = None, 
     order: str = ["colex", "lex"]
   ) -> np.ndarray:
   """
-  Ranks k-combinations to integer ranks in either lexicographic or colexicographical order
+  Ranks k-combinations to integer ranks in either lexicographic or colexicographical order.
   
   Parameters:
-    C : combination, or Iterable of combinations.
+    C : combination, Iterable of combinations, or array of integers.
+    k : size of each combination (broadcastable). If not supplied, 'C' must be 2-dimensional. 
     n : cardinality of the set (lex order only).
     order : the bijection to use.
   
@@ -101,58 +77,95 @@ def comb_to_rank(
   assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
   colex_order = (order == ["colex", "lex"] or order == "colex")
   assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
-  if isinstance(C, np.ndarray) or isinstance(C, Sized):
+  rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
+  if isinstance(C, np.ndarray) or isinstance(C, Container):
+    if isinstance(C, np.ndarray):
+      if C.ndim == 1: 
+        assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
+        return rank_comb_(C)
+      assert C.ndim == 2, "Can only handle array of dimensionality 2."
+      C.sort(axis=1)
+      C = np.fliplr(C) if colex_order else C
+    else:
+      el, C = spy(C)
+      if isinstance(el[0], Integral): return rank_comb_(C)
+      assert isinstance(el[0], Container), "Elements must be containers."
+      C = list(C)
     n = 0 if colex_order else n
     ranks = _combinatorial.rank_combs(C, n, colex_order)
     return ranks
+  elif isinstance(C, Iterable):
+    # return comb_rank_colex(C) if colex_order else comb_rank_lex(C, n)
+    el, C = spy(C)
+    if colex_order:
+      return _comb_rank_colex(C) if isinstance(el[0], Integral) else [_comb_rank_colex(c) for c in C]
+    else:
+      assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
+      return _comb_rank_lex(C, n) if isinstance(el[0], Integral) else [_comb_rank_lex(c, n) for c in C]
+  else: 
+    raise ValueError(f"Invalid combination type '{type(C)}' supplied")
 
-
-  
-  
-  # if order == ["colex", "lex"] or order == "colex":
-  #   return comb_rank_colex(C) if isinstance(el, Integral) else [comb_rank_colex(c) for c in C]
-  # else:
-  #   assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-  #   return comb_rank_lex(C, n) if isinstance(el, Integral) else [comb_rank_lex(c, n) for c in C]
-
-def rank_to_comb(R: Iterable[int], k: Union[int, Iterable], n: int = None, order: str = ["colex", "lex"]):
+def rank_to_comb(
+    R: Union[np.ndarray, Iterable, Integral], 
+    k: Union[int, Iterable], 
+    n: int = None, 
+    order: str = ["colex", "lex"]
+  ) -> np.ndarray:
   """
   Unranks integer ranks to  k-combinations in either lexicographic or colexicographical order.
   
   Parameters:
     R : Iterable of integer ranks 
+    k : size of combination to unrank to, as either an integer or an array of integers.
     n : cardinality of the set (only required for lex order)
     order : the bijection to use
   
   Returns:
     list : k-combinations derived from R
   """
-  # R = [R] if isinstance(R, Integral) else R ## convert single rank into 1-element list  
-  if order == ["colex", "lex"] or order == "colex":
-    if isinstance(R, Integral):
-      return comb_unrank_colex(R, k=k)
-    if isinstance(k, Integral):
-      return SimplexWrapper((comb_unrank_colex(r, k) for r in R), d=k-1)
-    else: 
-      assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
-      return [comb_unrank_colex(r, l) for l, r in zip(k,R)]
-  else: 
-    assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-    if isinstance(R, Integral):
-      return comb_unrank_colex(R, k=k, n=n)
-    if isinstance(k, Integral):
-      assert k > 0, f"Invalid cardinality {k}"
-      if k == 1:
-        return SimplexWrapper(((r,) for r in R), d=0)
-      if k == 2:
-        return SimplexWrapper((c2_lex_unrank(r, n) for r in R), d=1)
-        # return [unrank_C2(r, n) for r in R]
-      else: 
-        return SimplexWrapper((comb_unrank_lex(r, k, n) for r in R), d=k-1)
-        # return [unrank_lex(r, k, n) for r in R]
+  colex_order = (order == ["colex", "lex"] or order == "colex")
+  assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
+  if isinstance(R, Integral):
+    return _comb_unrank_colex(R, k=k) if colex_order else _comb_unrank_lex(R, k=k, n=n)
+  elif isinstance(R, np.ndarray):
+    assert R.ndim == 1, "Ranks must be one-dimensional array."
+    R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
+    C = np.empty(shape=(len(R), k), dtype=np.uint16)
+    n = 0 if colex_order else n
+    _combinatorial.unrank_combs(R, n, k, colex_order, C)
+    C.sort(axis=1) ## TODO: consider adding a flag 
+    return C 
+  elif isinstance(R, Iterable):
+    if colex_order:
+      return [_comb_unrank_colex(r, k) for r in R]
     else:
-      assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
-      return SimplexWrapper((comb_unrank_lex(r, k_) for k_, r in zip(k,R)))
+      assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
+      return [_comb_unrank_lex(r, n, k) for r in R]
+  else:
+    raise ValueError(f"Unknown input type for ranks '{type(R)}'")
+
+  #   if isinstance(k, Integral):
+  #     return SimplexWrapper((comb_unrank_colex(r, k) for r in R), d=k-1)
+  #   else: 
+  #     assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
+  #     return [comb_unrank_colex(r, l) for l, r in zip(k,R)]
+  # else: 
+  #   assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
+  #   if isinstance(R, Integral):
+  #     return comb_unrank_colex(R, k=k, n=n)
+  #   if isinstance(k, Integral):
+  #     assert k > 0, f"Invalid cardinality {k}"
+  #     if k == 1:
+  #       return SimplexWrapper(((r,) for r in R), d=0)
+  #     if k == 2:
+  #       return SimplexWrapper((c2_lex_unrank(r, n) for r in R), d=1)
+  #       # return [unrank_C2(r, n) for r in R]
+  #     else: 
+  #       return SimplexWrapper((comb_unrank_lex(r, k, n) for r in R), d=k-1)
+  #       # return [unrank_lex(r, k, n) for r in R]
+  #   else:
+  #     assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
+  #     return SimplexWrapper((comb_unrank_lex(r, k_) for k_, r in zip(k,R)))
 
 
 def inverse_choose(x: int, k: int):
@@ -162,8 +175,9 @@ def inverse_choose(x: int, k: int):
 
   binom(n,k) := n!/(k! * (n-k)!)
 
-  For k <= 2, an efficient iterative approach is used and the result is exact. For k > 2, the same approach is 
-  used if x > 10e7; otherwise, an approximation is used based on the formula from this stack exchange post: 
+  For k <= 2, a logartihmic numpy-based approach is used and the result is exact. 
+  For k > 2 and x <= 10e7, an linear-search is used based on tight bounds and the result is exact. 
+  For k > 2 and x > 10e7; an iterative approach is used based on loose bounds from the formula from this stack exchange post: 
 
   https://math.stackexchange.com/questions/103377/how-to-reverse-the-n-choose-k-formula
   """

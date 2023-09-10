@@ -36,11 +36,13 @@ auto rank_combs_list(py::list combs, const size_t n, bool colex = true) -> py::a
   if (colex) {
     for (py::handle obj: combs) {
       auto s = obj.cast< std::vector< uint16_t > >();
+      std::sort(s.begin(), s.end(), std::greater<>());
       *out++ = combinatorial::rank_colex_k(s.begin(), s.size());
     }
   } else {
     for (py::handle obj: combs) {
       auto s = obj.cast< std::vector< uint16_t > >();
+      std::sort(s.begin(), s.end(), std::less<>());
       const size_t k = s.size();
       const size_t N = combinatorial::BinomialCoefficient< true >(n, k);
       *out++ = combinatorial::rank_lex_k(s.begin(), n, k, N);
@@ -50,7 +52,7 @@ auto rank_combs_list(py::list combs, const size_t n, bool colex = true) -> py::a
 }
 
 
-auto comb(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K) -> py::array_t< uint64_t > {
+auto comb1(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K) -> py::array_t< uint64_t > {
   if (N.size() != K.size()){ throw std::invalid_argument("N adn K must match."); }
   const size_t array_sz = N.size();  
   auto output_combs = std::vector< uint64_t >();\
@@ -62,6 +64,55 @@ auto comb(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K) ->
   }
   return py::cast(output_combs);
 }
+
+auto comb2(const py::array_t< uint64_t >& N, const uint16_t k) -> py::array_t< uint64_t > {
+  const size_t array_sz = N.size();  
+  auto output_combs = std::vector< uint64_t >();\
+  output_combs.reserve(array_sz);
+  auto out = std::back_inserter(output_combs);
+  auto NA = N.unchecked< 1 >();
+  for (size_t i = 0; i < array_sz; ++i){
+    *out++ = combinatorial::BinomialCoefficient< true >(NA(i), k);
+  }
+  return py::cast(output_combs);
+}
+
+auto comb3(const uint16_t N, const py::array_t< uint64_t >& K) -> py::array_t< uint64_t > {
+  const size_t array_sz = K.size();  
+  auto output_combs = std::vector< uint64_t >();
+  output_combs.reserve(array_sz);
+  auto out = std::back_inserter(output_combs);
+  auto KA = K.unchecked< 1 >();
+  for (size_t i = 0; i < array_sz; ++i){
+    *out++ = combinatorial::BinomialCoefficient< true >(N, KA(i));
+  }
+  return py::cast(output_combs);
+}
+
+auto comb4(const uint16_t N, const uint16_t K) -> uint64_t {
+  return combinatorial::BinomialCoefficient< true >(N, K);
+}
+
+auto unrank_combranks_array(
+  const py::array_t< uint64_t >& ranks, 
+  const size_t n,  
+  const size_t k, 
+  const bool colex,
+  py::array_t< uint16_t, py::array::c_style | py::array::forcecast >& out
+){
+  const uint64_t* inp_ptr = static_cast< const uint64_t* >(ranks.data()); 
+  // py::buffer_info rank_buffer = ranks.request();
+  uint16_t* out_ptr = static_cast< uint16_t* >(out.mutable_data()); 
+  // combinatorial::unrank_lex(inp_ptr, inp_ptr + ranks.size(), n, k, out_ptr);
+  if (colex){
+    combinatorial::unrank_combs< true >(inp_ptr, inp_ptr + ranks.size(), n, k, out_ptr);
+  } else {
+    combinatorial::unrank_combs< false >(inp_ptr, inp_ptr + ranks.size(), n, k, out_ptr);
+  }
+	// inline void unrank_lex(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
+}
+
+
 // auto unrank_combs(py::array_t< int > ranks, const int n, const int k) -> py::array_t< int > {
 //   py::buffer_info buffer = ranks.request();
 //   int* r = static_cast< int* >(buffer.ptr);
@@ -87,7 +138,10 @@ PYBIND11_MODULE(_combinatorial, m) {
   m.doc() = "Combinatorial module";
   m.def("rank_combs", &rank_combs_array);
   m.def("rank_combs", &rank_combs_list);
-  m.def("comb", &comb);
+  m.def("unrank_combs", &unrank_combranks_array);
+  m.def("comb", &comb1);
+  m.def("comb", &comb2);
+  m.def("comb", &comb3);
   // m.def("unrank_combs", &unrank_combs);
   // m.def("boundary_ranks", &boundary_ranks);
   // m.def("interval_cost", &pairwise_cost);
