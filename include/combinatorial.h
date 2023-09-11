@@ -4,7 +4,7 @@
 #ifndef COMBINATORIAL_H
 #define COMBINATORIAL_H 
 
-#include <iostream>
+// #include <iostream>
 #include <cstdint>		// uint_fast64_t
 #include <array>
 #include <cassert>
@@ -504,9 +504,9 @@ namespace combinatorial {
 	[[nodiscard]]
 	index_t get_max_vertex(const index_t r, const index_t m, const index_t n) noexcept {
 		// return get_max(n, k-1, [&](index_t w) -> bool { return r >= BinomialCoefficient< safe >(w, k); });
-		std::cout << "r: " << r << ", " << "m: " << m << std::endl;
+		// std::cout << "r: " << r << ", " << "m: " << m << std::endl;
 		index_t k_lb = find_k(r,m); 								// finds k such that comb(k-1, m) <= r
-		std::cout << "k lb (find_k): " << k_lb << ", m: " << m << std::endl;
+		// std::cout << "k lb (find_k): " << k_lb << ", m: " << m << std::endl;
 		assert(k_lb >= 1); 																// It should be a positive integer!
 		assert(BinomialCoefficient(k_lb - 1,m) <= r);		  // it should be a lower bound!
 		if (r < BinomialCoefficient< safe >(k_lb, m)){ return k_lb; }
@@ -534,7 +534,7 @@ namespace combinatorial {
 			index_t r = static_cast< index_t >(*s); 
 			for (index_t m = k; m > 1; --m) {
 				K = get_max_vertex< true >(r, m, n); // k satisfying comb(k-1,m) <= r < comb(k, m)
-				std::cout << "r: " << r << ", k: " << k << ", m: " << m << ", K: " << K << ", n: " << n << std::endl;
+				// std::cout << "r: " << r << ", k: " << k << ", m: " << m << ", K: " << K << ", n: " << n << std::endl;
 				*out++ = K-1;	// this differs from the paper because we want 0-based indices
 				r -= BinomialCoefficient< true >(K-1, m); // TODO: how to fix this 
 			}
