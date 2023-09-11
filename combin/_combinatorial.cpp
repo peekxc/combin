@@ -93,6 +93,21 @@ auto comb4(const uint16_t N, const uint16_t K) -> uint64_t {
   return combinatorial::BinomialCoefficient< true >(N, K);
 }
 
+auto comb5(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K, const size_t max_n, const size_t max_k) -> py::array_t< uint64_t > {
+  if (N.size() != K.size()){ throw std::invalid_argument("N adn K must match."); }
+  combinatorial::BC.precompute(max_n, max_k);
+  
+  const size_t array_sz = N.size();  
+  auto output_combs = std::vector< uint64_t >();\
+  output_combs.reserve(array_sz);
+  auto out = std::back_inserter(output_combs);
+  auto NA = N.unchecked< 1 >(), KA = K.unchecked< 1 >();
+  for (size_t i = 0; i < array_sz; ++i){
+    *out++ = combinatorial::BinomialCoefficient< false >(NA(i), KA(i));
+  }
+  return py::cast(output_combs);
+}
+
 auto unrank_combranks_array(
   const py::array_t< uint64_t >& ranks, 
   const size_t n,  
@@ -142,6 +157,8 @@ PYBIND11_MODULE(_combinatorial, m) {
   m.def("comb", &comb1);
   m.def("comb", &comb2);
   m.def("comb", &comb3);
+  m.def("comb", &comb4);
+  m.def("comb", &comb5);
   // m.def("unrank_combs", &unrank_combs);
   // m.def("boundary_ranks", &boundary_ranks);
   // m.def("interval_cost", &pairwise_cost);

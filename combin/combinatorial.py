@@ -44,14 +44,16 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
   Unranks a k-combinations rank 'r' back into the original combination in colex order
   
   From: Unranking Small Combinations of a Large Set in Co-Lexicographic Order
+  
+  This takes O(k^2 (n - k)) time
   """
   c = [0]*k
-  for i in reversed(range(1, k+1)):
+  for i in reversed(range(1, k+1)): # O(k)
     m = i
-    while r >= comb(m,i):
+    while r >= comb(m,i):           # O(n) as min comparisons == n − m + 1 (when i = m), max comparisons is n (when i = 1);
       m += 1
     c[i-1] = m-1
-    r -= comb(m-1,i)
+    r -= comb(m-1,i)                # comb is O(min(n-k, k)) ~ O(k)
   return tuple(c)
 
 def comb_to_rank(
@@ -76,7 +78,7 @@ def comb_to_rank(
   """
   assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
   colex_order = (order == ["colex", "lex"] or order == "colex")
-  assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
+  assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking." # note we need n for colex too!
   rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
   if isinstance(C, np.ndarray) or isinstance(C, Container):
     if isinstance(C, np.ndarray):
@@ -91,7 +93,8 @@ def comb_to_rank(
       if isinstance(el[0], Integral): return rank_comb_(C)
       assert isinstance(el[0], Container), "Elements must be containers."
       C = list(C)
-    n = 0 if colex_order else n
+    #assert n is not None, "Set cardinality 'n' must be supplied for efficient ranking." # note we need n for colex too!
+    n = (np.max(C)+1) if n is None else n
     ranks = _combinatorial.rank_combs(C, n, colex_order)
     return ranks
   elif isinstance(C, Iterable):
@@ -131,7 +134,7 @@ def rank_to_comb(
     assert R.ndim == 1, "Ranks must be one-dimensional array."
     R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
     C = np.empty(shape=(len(R), k), dtype=np.uint16)
-    n = 0 if colex_order else n
+    n = inverse_choose(np.max(R), k, exact=False) if n is None else n
     _combinatorial.unrank_combs(R, n, k, colex_order, C)
     C.sort(axis=1) ## TODO: consider adding a flag 
     return C 
@@ -168,7 +171,7 @@ def rank_to_comb(
   #     return SimplexWrapper((comb_unrank_lex(r, k_) for k_, r in zip(k,R)))
 
 
-def inverse_choose(x: int, k: int):
+def inverse_choose(x: int, k: int, exact: bool = True):
   """Inverse binomial coefficient (approximately). 
 
   This function *attempts* to find the integer _n_ such that binom(n,k) = x, where _binom_ is the binomial coefficient: 
@@ -195,10 +198,17 @@ def inverse_choose(x: int, k: int):
     # From: https://math.stackexchange.com/questions/103377/how-to-reverse-the-n-choose-k-formula
     if x < 10**7:
       lb = (factorial(k)*x)**(1/k)
-      potential_n = range(floor(lb), ceil(lb+k)+1)
-      comb_cand = [comb(n, k) for n in potential_n]
-      if x in comb_cand:
-        return potential_n[comb_cand.index(x)]
+      potential_n = np.arange(floor(lb), ceil(lb+k)+1)
+      comb_cand = np.array([comb(n, k) for n in potential_n])
+      ub_ind = np.searchsorted(comb_cand, x)
+      if exact and x != comb_cand[ub_ind]:
+        raise ValueError(f"Unable to invert 'x' = {x}")
+      elif exact and x == comb_cand[ub_ind]:
+        return potential_n[ub_ind]
+      else: # not exact
+        if ub_ind >= len(comb_cand):
+          raise ValueError(f"Low/upper bounds calculations do not hold for 'x' = {x}")
+        return potential_n[ub_ind]
     else:
       lb = np.floor((4**k)/(2*k + 1))
       C, n = factorial(k)*x, 1

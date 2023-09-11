@@ -4,9 +4,10 @@
 #ifndef COMBINATORIAL_H
 #define COMBINATORIAL_H 
 
-// #include <iostream>
+#include <iostream>
 #include <cstdint>		// uint_fast64_t
 #include <array>
+#include <cassert>
 // #include <span> 		 	// span (C++20)
 #include <cmath>	 	 	// round, sqrt
 #include <numeric>   	// midpoint, accumulate
@@ -441,14 +442,14 @@ namespace combinatorial {
 				// Log(n) variant 
 				const size_t N = combinatorial::BinomialCoefficient< safe >(n, k);
 				for (auto r = *s; s != e; ++s, r = *s){ 
-					r = (N-1) - r; 
+					r = (N-1) - r; // apply dual mapping
 					for (size_t ki = k; ki > 0; --ki){
 						int offset = binary_search(r, n, [ki](const auto& key, int index) -> int {
 							auto c = combinatorial::BinomialCoefficient< safe >(index, ki);
 							return(key == c ? 0 : (key < c ? -1 : 1));
 						});
 						r -= combinatorial::BinomialCoefficient< safe >(offset, ki); 
-						*out++ = (n-1) - offset;
+						*out++ = (n-1) - offset; // undo dual mapping
 					}
 				}
 				break;
@@ -456,6 +457,10 @@ namespace combinatorial {
 		}
 	}
 
+	// Finds the largest index i in the range [bottom, top] wherein pred(i) is true by binary search. 
+	// For examle, assuming the sequence is sorted like: 
+	// v = { true, true, true, false, false, false, false }
+	// In this case, get_max(v.size()-1, v, v.operator[]) returns the index 2. 
 	template <class Predicate>
 	[[nodiscard]]
 	index_t get_max(index_t top, const index_t bottom, const Predicate pred) noexcept {
@@ -474,47 +479,64 @@ namespace combinatorial {
 		return top;
 	}
 
+	// Find a good lower bound to initiate the search for the value k satisfying choose(k-1, m) <= r < choose(k, m)
 	// From: Kruchinin, Vladimir, et al. "Unranking Small Combinations of a Large Set in Co-Lexicographic Order." Algorithms 15.2 (2022): 36.
 	// return std::ceil(m * exp(log(r)/m + log(2*pi*m)/2*m + 1/(12*m*m) - 1/(360*pow(m,4)) - 1) + (m-1)/2);
 	[[nodiscard]]
-	constexpr auto find_k(index_t r, index_t m) noexcept -> int {
-		if (r == 0 || m == 0){ return m - 1; }
-		else if (m == 1){ return r - 1; }
-		else if (m == 2){ return std::ceil(std::sqrt(1 + 8*r)/2) - 1; }
-		else if (m == 3){ return std::ceil(std::pow(6*r, 1/3.)) - 1; }
+	constexpr auto find_k(const index_t r, const index_t m) noexcept -> index_t {
+		assert(m > 0); // m should never be zero probably
+		if (r == 0){ return m; } 
+		else if (m == 1){ return r; }
+		else if (m == 2){ return std::ceil((1.0+std::sqrt(1+8*static_cast<float>(r)))/2.f); }
+		else if (m == 3){ return std::ceil(std::pow(6*static_cast<float>(r), 1.f/3.f)); }
 		else { 
-			return m - 1; // the final bound they compute didn't make sense in my tests, so we return m - 1.
+			return static_cast< index_t >(m); // the final bound they compute didn't make sense in my tests, so we return m - 1.
 		}
 	}
 
+	// Binary searches for the value K satisfying choose(K-1, m) <= r < choose(K, m) 
+	// This implements two algorithms: 
+	// (1) First, a lower bound for K is computed in O(1) time using an approximation that tends to be tight
+	// (2) Second, a constant number of comparisons are done to check the tightness of the approximation, returning early if successful
+	// (3) If (1) and (2) fail, then the range [k-1, n] is searched for the largest index _w_ satisfying r >= choose(w,k) via binary search
+	// k >= 1, N <= n - 1, 0 <= r < choose(n,k)
 	template< bool safe = true > 
 	[[nodiscard]]
-	index_t get_max_vertex(const index_t r, const index_t k, const index_t n) noexcept {
-		// Binary searches in the range [k-1, n] for the largest index _w_ satisfying r >= C(w,k)
+	index_t get_max_vertex(const index_t r, const index_t m, const index_t n) noexcept {
 		// return get_max(n, k-1, [&](index_t w) -> bool { return r >= BinomialCoefficient< safe >(w, k); });
-		
-		const int lb = find_k(r,k);
-		// assert(BinomialCoefficient(lb, k) <= r);
-		return BinomialCoefficient< safe >(lb+1, k) > r ? 
-			lb : 
-				( BinomialCoefficient< safe >(lb+2, k) > r ? 
-					lb + 1 : 
-						( BinomialCoefficient< safe >(lb+3, k) > r ? 
-							lb + 2 :  
-							get_max(n, lb+3, [&](index_t w) -> bool { return r >= BinomialCoefficient< safe >(w, k); })
-						)
-				);
+		std::cout << "r: " << r << ", " << "m: " << m << std::endl;
+		index_t k_lb = find_k(r,m); 								// finds k such that comb(k-1, m) <= r
+		std::cout << "k lb (find_k): " << k_lb << ", m: " << m << std::endl;
+		assert(k_lb >= 1); 																// It should be a positive integer!
+		assert(BinomialCoefficient(k_lb - 1,m) <= r);		  // it should be a lower bound!
+		if (r < BinomialCoefficient< safe >(k_lb, m)){ return k_lb; }
+		if (r < BinomialCoefficient< safe >(k_lb+1,m)){ return k_lb+1; }
+		if (r < BinomialCoefficient< safe >(k_lb+2,m)){ return k_lb+2; }
+		k_lb = get_max(n, k_lb+2, [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; }); // should be <= to find UB
+		return k_lb+1;
+		// return BinomialCoefficient< safe >(lb+1, k) > r ? 
+		// 	lb : 
+		// 		( BinomialCoefficient< safe >(lb+2, k) > r ? 
+		// 			lb + 1 : 
+		// 				( BinomialCoefficient< safe >(lb+3, k) > r ? 
+		// 					lb + 2 :  
+		// 					get_max(n, lb+3, [&](index_t w) -> bool { return r >= BinomialCoefficient< safe >(w, k); })
+		// 				)
+		// 		);
 	}
 
+	// Successively unranks each k-combination of a n-set into out
 	template < bool safe = true, typename InputIt, typename OutputIt >
 	void unrank_colex(InputIt s, const InputIt e, const index_t n, const index_t k, OutputIt out) noexcept {
-		for (index_t N = n - 1; s != e; ++s, N = n - 1){
-			index_t r = *s; 
-			for (index_t d = k; d > 1; --d) {
-				N = get_max_vertex< true >(r, d, N); // TODO: and this
-				//std::cout << "r: " << r << ", d: " << d << ", N: " << N << std::endl;
-				*out++ = N;
-				r -= BinomialCoefficient< true >(N, d); // TODO: how to fix this 
+		for (index_t K = n - 1; s != e; ++s, K = n - 1){
+			
+			// --- Unrank r --- 
+			index_t r = static_cast< index_t >(*s); 
+			for (index_t m = k; m > 1; --m) {
+				K = get_max_vertex< true >(r, m, n); // k satisfying comb(k-1,m) <= r < comb(k, m)
+				std::cout << "r: " << r << ", k: " << k << ", m: " << m << ", K: " << K << ", n: " << n << std::endl;
+				*out++ = K-1;	// this differs from the paper because we want 0-based indices
+				r -= BinomialCoefficient< true >(K-1, m); // TODO: how to fix this 
 			}
 			*out++ = r;
 		}
@@ -523,11 +545,11 @@ namespace combinatorial {
 	// Unrank subsets wrapper
 	template< bool colex = true, typename InputIt, typename OutputIt >
 	inline void unrank_combs(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
-		if ((BC.pre_n < n) || (BC.pre_k < k)){ BC.precompute(n+1,k+1); } // precompute binomial coefficients! 
+		if ((BC.pre_n < n) || (BC.pre_k < k)){ BC.precompute(n,k); } // precompute binomial coefficients
 		if constexpr(colex){
-			unrank_colex< false >(s, e, n, k, out);	
+			unrank_colex< false >(s, e, n, k, out);	// pass safe = false to use precomputed table
 		} else {
-			unrank_lex< false >(s, e, n, k, out);
+			unrank_lex< false >(s, e, n, k, out); // pass safe = false to use precomputed table
 		}
 	}
 

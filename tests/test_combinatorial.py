@@ -1,15 +1,40 @@
 import numpy as np
 from math import comb
-from itertools import combinations
+from itertools import combinations, product 
 from functools import partial
 from combin import comb_to_rank, rank_to_comb, inverse_choose
-from combin.combinatorial import _combinatorial
+from combin.combinatorial import _combinatorial, _comb_unrank_colex, _comb_rank_colex
+
+def basic_test():
+  n, k = 10,3
+  c1, c2 = [0,1,2], [0,1,3]
+  ranks = np.array([0,1], dtype=np.uint64) 
+  combs_test_cpp = rank_to_comb(ranks, k=k, order="colex")
+  assert np.all(np.array([c1,c2], dtype=np.uint64) == combs_test_cpp)
+
+  from scipy.special import comb
+  n, k = 20, 5
+  c = [2,4,13,15,19]
+  r = _comb_rank_colex(c)
+  ranks = np.array([r], dtype=np.uint64) 
+  assert np.all(rank_to_comb(ranks, k=k, n=n,order="colex") == np.array([[c]], dtype=np.uint64))
+
+  ## carefully crafted case for find_k
+  n, k = 20, 4
+  r = comb_to_rank(np.array([[0,1,2,6]], dtype=np.uint16), k=k, n=n)  # 15 
+  c = rank_to_comb(r, k=k, n=n)
+  assert np.all(c == np.array([[0,1,2,6]], dtype=np.uint16))
 
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
   assert all(_combinatorial.comb([1,2,3],[0,0,0]) == np.array([1,1,1]))
-  assert rank_to_comb([0,1,2], k=3) == [(0, 1, 2), (0, 1, 3), (0, 2, 3)]
-  assert all(comb_to_rank([(0,1,2), (0,1,3), (0,2,3)]) == [0,1,2])
+  max_n, max_k = 100, 5
+  all_n, all_k, res = [], [], []
+  for n,k in product(range(max_n), range(max_k)):
+    all_n.append(n)
+    all_k.append(k)
+    res.append(comb(n,k))
+  assert np.allclose(_combinatorial.comb(all_n, all_k, max_n, max_k), np.array(res))
 
 def test_numpy_ranking():
   n, k = 10, 3
@@ -28,8 +53,9 @@ def test_colex():
   assert all(ranks == ranks2), "Ranking is not order-invariant"
   combs_test = np.array([rank_to_comb(r, k) for r in ranks])
   combs_truth = np.array(list(combinations(range(n),k)))
+  combs_test_cpp = rank_to_comb(ranks, k=k, order="colex")
   assert all(np.ravel(combs_test == combs_truth)), "Colex unranking invalid"
-  assert all(np.ravel(combs_truth == rank_to_comb(ranks, k=k, order="colex"))), "Colex unranking invalid"
+  assert all(np.ravel(combs_truth == combs_test_cpp)), "Colex unranking invalid"
 
 def test_array_conversion():
   x = np.array(rank_to_comb([0,1,2], k=2))
@@ -48,10 +74,12 @@ def test_lex():
   assert all((combs_truth == combs_truth2).flatten()), "Lex unranking invalid"
 
 def test_api():
+  assert rank_to_comb([0,1,2], k=3) == [(0, 1, 2), (0, 1, 3), (0, 2, 3)]
+  assert all(comb_to_rank([(0,1,2), (0,1,3), (0,2,3)], n=4) == [0,1,2])
   n = 20
-  for d in range(1, 5):
-    combs = list(combinations(range(n), d))
-    C = rank_to_comb(comb_to_rank(combs, k=d, n=n), k=d, n=n)
+  for k in range(1, 5):
+    combs = list(combinations(range(n), k))
+    C = rank_to_comb(comb_to_rank(combs, k=k, n=n), k=k, n=n)
     assert all([tuple(s) == tuple(c) for s,c in zip(combs, C)])
 
 def test_inverse():
