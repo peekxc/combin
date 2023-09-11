@@ -47,12 +47,12 @@ def test_lex():
   assert all((combs_test == combs_truth).flatten()), "Lex unranking invalid"
   assert all((combs_truth == combs_truth2).flatten()), "Lex unranking invalid"
 
-# def test_api():
-#   n = 20
-#   for d in range(1, 5):
-#     combs = list(combinations(range(n), d))
-#     C = unrank_combs(comb_to_rank(combs), k=d)
-#     assert all([tuple(s) == tuple(c) for s,c in zip(combs, C)])
+def test_api():
+  n = 20
+  for d in range(1, 5):
+    combs = list(combinations(range(n), d))
+    C = rank_to_comb(comb_to_rank(combs, k=d, n=n), k=d, n=n)
+    assert all([tuple(s) == tuple(c) for s,c in zip(combs, C)])
 
 def test_inverse():
   from math import comb

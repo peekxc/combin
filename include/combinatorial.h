@@ -190,7 +190,7 @@ namespace combinatorial {
 			for (index_t i = 0; i <= n; ++i) {
 				BT[0][i] = 1;
 				for (index_t j = 1; j < std::min(i, k + 1); ++j){
-					BT[j][i] = BT[j - 1][i - 1] + BT[j][i - 1];
+					BT[j][i] = binom(i,j); // BT[j - 1][i - 1] + BT[j][i - 1];
 				}
 				if (i <= k) { BT[i][i] = 1; };
 			}
@@ -383,12 +383,11 @@ namespace combinatorial {
 		*out++ = j; // equivalent to *out = j; ++j;
 	}
 	
-	// BUGGED: Lexicographically unrank k-subsets [ O(log n) version ]
+	// Lexicographically unrank k-subsets [ O(log n) version ]
 	// template< bool safe = true, typename OutputIterator > 
 	// inline void unrank_lex_k(index_t r, const size_t n, const size_t k, OutputIterator out) noexcept {
 	// 	const size_t N = combinatorial::BinomialCoefficient< safe >(n, k);
 	// 	r = (N-1) - r; 
-	// 	// auto S = std::vector< size_t >(k);
 	// 	for (size_t ki = k; ki > 0; --ki){
 	// 		int offset = binary_search(r, n, [ki](const auto& key, int index) -> int {
 	// 			auto c = combinatorial::BinomialCoefficient< safe >(index, ki);
@@ -400,21 +399,21 @@ namespace combinatorial {
 	// }
 
 	// Lexicographically unrank k-subsets [ O(n) version ]
-	template< bool safe = true, typename OutputIterator >
-	inline void unrank_lex_k(index_t r, const size_t n, const size_t k, OutputIterator out){
-		// auto subset = std::vector< size_t >(k); 
-		size_t x = 1; 
-		for (size_t i = 1; i <= k; ++i){
-			while(r >= BinomialCoefficient(n-x, k-i)){
-				r -= BinomialCoefficient(n-x, k-i);
-				x += 1;
-			}
-			*out++ = (x - 1);
-			x += 1;
-		}
-	}
+	// template< bool safe = true, typename OutputIterator >
+	// inline void unrank_lex_k(index_t r, const size_t n, const size_t k, OutputIterator out){
+	// 	size_t x = 1; 
+	// 	for (size_t i = 1; i <= k; ++i){
+	// 		while(r >= BinomialCoefficient(n-x, k-i)){
+	// 			r -= BinomialCoefficient(n-x, k-i);
+	// 			x += 1;
+	// 		}
+	// 		*out++ = (x - 1);
+	// 		x += 1;
+	// 	}
+	// }
 
 	// Lexicographically unrank subsets wrapper
+	// NOTE: don't re-pass output iterator to another function, as pass by value won't work here!
 	template< bool safe = true, typename InputIt, typename OutputIt >
 	inline void unrank_lex(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
 		switch(k){
@@ -428,15 +427,28 @@ namespace combinatorial {
 				break;
 			}
 			default: {
+				// for (auto r = *s; s != e; ++s, r = *s){ 
+				// 	size_t x = 1; 
+				// 	for (size_t i = 1; i <= k; ++i){
+				// 		while(r >= BinomialCoefficient(n-x, k-i)){
+				// 			r -= BinomialCoefficient(n-x, k-i);
+				// 			x += 1;
+				// 		}
+				// 		*out++ = (x - 1);
+				// 		x += 1;
+				// 	}
+				// }
+				// Log(n) variant 
+				const size_t N = combinatorial::BinomialCoefficient< safe >(n, k);
 				for (auto r = *s; s != e; ++s, r = *s){ 
-					size_t x = 1; 
-					for (size_t i = 1; i <= k; ++i){
-						while(r >= BinomialCoefficient(n-x, k-i)){
-							r -= BinomialCoefficient(n-x, k-i);
-							x += 1;
-						}
-						*out++ = (x - 1);
-						x += 1;
+					r = (N-1) - r; 
+					for (size_t ki = k; ki > 0; --ki){
+						int offset = binary_search(r, n, [ki](const auto& key, int index) -> int {
+							auto c = combinatorial::BinomialCoefficient< safe >(index, ki);
+							return(key == c ? 0 : (key < c ? -1 : 1));
+						});
+						r -= combinatorial::BinomialCoefficient< safe >(offset, ki); 
+						*out++ = (n-1) - offset;
 					}
 				}
 				break;
@@ -471,7 +483,7 @@ namespace combinatorial {
 		else if (m == 2){ return std::ceil(std::sqrt(1 + 8*r)/2) - 1; }
 		else if (m == 3){ return std::ceil(std::pow(6*r, 1/3.)) - 1; }
 		else { 
-			return m - 1; 
+			return m - 1; // the final bound they compute didn't make sense in my tests, so we return m - 1.
 		}
 	}
 
@@ -499,22 +511,23 @@ namespace combinatorial {
 		for (index_t N = n - 1; s != e; ++s, N = n - 1){
 			index_t r = *s; 
 			for (index_t d = k; d > 1; --d) {
-				N = get_max_vertex< safe >(r, d, N);
-				// std::cout << "r: " << r << ", d: " << d << ", N: " << N << std::endl;
+				N = get_max_vertex< true >(r, d, N); // TODO: and this
+				//std::cout << "r: " << r << ", d: " << d << ", N: " << N << std::endl;
 				*out++ = N;
-				r -= BinomialCoefficient< safe >(N, d);
+				r -= BinomialCoefficient< true >(N, d); // TODO: how to fix this 
 			}
 			*out++ = r;
 		}
 	}
 
 	// Unrank subsets wrapper
-	template< bool colex = true, bool safe = true, typename InputIt, typename OutputIt >
+	template< bool colex = true, typename InputIt, typename OutputIt >
 	inline void unrank_combs(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
+		if ((BC.pre_n < n) || (BC.pre_k < k)){ BC.precompute(n+1,k+1); } // precompute binomial coefficients! 
 		if constexpr(colex){
-			unrank_colex< safe >(s, e, n, k, out);	
+			unrank_colex< false >(s, e, n, k, out);	
 		} else {
-			unrank_lex< safe >(s, e, n, k, out);
+			unrank_lex< false >(s, e, n, k, out);
 		}
 	}
 
