@@ -5,7 +5,9 @@ from functools import partial
 from combin import comb_to_rank, rank_to_comb, inverse_choose
 from combin.combinatorial import _combinatorial, _comb_unrank_colex, _comb_rank_colex
 
-def basic_test():
+# print(__file__)
+
+def test_basic():
   n, k = 10,3
   c1, c2 = [0,1,2], [0,1,3]
   ranks = np.array([0,1], dtype=np.uint64) 
@@ -24,6 +26,13 @@ def basic_test():
   r = comb_to_rank(np.array([[0,1,2,6]], dtype=np.uint16), k=k, n=n)  # 15 
   c = rank_to_comb(r, k=k, n=n)
   assert np.all(c == np.array([[0,1,2,6]], dtype=np.uint16))
+
+  ## Should be in reverse lex order
+  n, k = 20, 3
+  r = np.array([34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 0], dtype=np.uint64)
+  c = rank_to_comb(r, k=k, n=n, order='lex')
+  assert np.all(c[-1,:] == [0,1,2]) and np.all(c[0,:] == [0,2,19])
+  
 
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
@@ -93,3 +102,10 @@ def test_inverse():
     assert inverse_choose(x, 2) == n
   for n, x in zip(N, map(comb3, N)):
     assert inverse_choose(x, 3) == n
+
+
+def test_facet_enumeration():
+  from combin.combinatorial import _combinatorial
+  n, k = 10, 3
+  r = comb_to_rank([0,4,7], n = 10)
+  _combinatorial.facet_ranks(r, k-1, n)

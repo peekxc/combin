@@ -428,6 +428,7 @@ namespace combinatorial {
 				break;
 			}
 			default: {
+				// O(n) variant 
 				// for (auto r = *s; s != e; ++s, r = *s){ 
 				// 	size_t x = 1; 
 				// 	for (size_t i = 1; i <= k; ++i){
@@ -439,7 +440,7 @@ namespace combinatorial {
 				// 		x += 1;
 				// 	}
 				// }
-				// Log(n) variant 
+				// O(log(n)) variant 
 				const size_t N = combinatorial::BinomialCoefficient< safe >(n, k);
 				for (auto r = *s; s != e; ++s, r = *s){ 
 					r = (N-1) - r; // apply dual mapping

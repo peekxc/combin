@@ -127,6 +127,43 @@ auto unrank_combranks_array(
 	// inline void unrank_lex(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
 }
 
+using combinatorial::index_t; 
+
+// 5,3,0
+auto enumerate_cofacets(index_t r, const size_t k, const size_t n) -> py::array_t< uint64_t > {
+  std::vector< uint64_t > facet_ranks;
+  index_t idx_below = r;
+  index_t idx_above = 0; 
+  index_t j = n - 1;
+  for (index_t l = 0; l < k - 1; ++l){
+
+  }
+}
+
+
+// Given these two functions, we should be able to bulk-process apparent pairs...
+auto enumerate_facets(index_t r, const size_t k, const size_t n) -> py::array_t< uint64_t > {
+  std::vector< uint64_t > facet_ranks;
+  index_t idx_below = r;
+  index_t idx_above = 0; 
+  index_t j = n - 1;
+  for (index_t l = 0; l < k - 1; ++l){
+
+  }
+  // for (index_t ki = 0; ki <= k; ++ki){
+  //   j = combinatorial::get_max_vertex< true >(idx_below, k + 1, j);
+  //   index_t c = combinatorial::BinomialCoefficient< true >(j, k + 1);
+  //   index_t face_index = idx_above - c + idx_below;
+  //   idx_below -= c;
+  //   idx_above += combinatorial::BinomialCoefficient< true >(j, k);
+  //   // --k;
+  //   facet_ranks.push_back(face_index);   
+  // }
+  return py::cast(facet_ranks);
+}
+
+
+
 
 // auto unrank_combs(py::array_t< int > ranks, const int n, const int k) -> py::array_t< int > {
 //   py::buffer_info buffer = ranks.request();
@@ -159,6 +196,7 @@ PYBIND11_MODULE(_combinatorial, m) {
   m.def("comb", &comb3);
   m.def("comb", &comb4);
   m.def("comb", &comb5);
+  m.def("facet_ranks", &enumerate_facets);
   // m.def("unrank_combs", &unrank_combs);
   // m.def("boundary_ranks", &boundary_ranks);
   // m.def("interval_cost", &pairwise_cost);

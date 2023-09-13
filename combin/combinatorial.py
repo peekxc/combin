@@ -88,6 +88,7 @@ def comb_to_rank(
       assert C.ndim == 2, "Can only handle array of dimensionality 2."
       C.sort(axis=1)
       C = np.fliplr(C) if colex_order else C
+      C = np.array(C, order='K', copy=True) if not C.flags['OWNDATA'] else C # copy if a view was given
     else:
       el, C = spy(C)
       if isinstance(el[0], Integral): return rank_comb_(C)
@@ -133,6 +134,7 @@ def rank_to_comb(
   elif isinstance(R, np.ndarray):
     assert R.ndim == 1, "Ranks must be one-dimensional array."
     R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
+    R = np.array(R, order='K', copy=True) if not R.flags['OWNDATA'] else R # copy if view was given
     C = np.empty(shape=(len(R), k), dtype=np.uint16)
     n = inverse_choose(np.max(R), k, exact=False) if n is None else n
     _combinatorial.unrank_combs(R, n, k, colex_order, C)
