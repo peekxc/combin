@@ -6,15 +6,6 @@ from math import floor, ceil, comb, factorial
 import _combinatorial
 from more_itertools import collapse, spy, first_true
 
-def _comb2_lex_rank(i: int, j: int, n: int) -> int:
-  i, j = (j, i) if j < i else (i, j)
-  return(int(n*i - i*(i+1)/2 + j - i - 1))
-
-def _comb2_lex_unrank(x: int, n: int) -> tuple:
-  i = int(n - 2 - np.floor(np.sqrt(-8*x + 4*n*(n-1)-7)/2.0 - 0.5))
-  j = int(x + i + 1 - n*(n-1)/2 + (n-i)*((n-i)-1)/2)
-  return(i,j) 
-
 def _comb_unrank_lex(r: int, n: int, k: int):
   result = [0]*k
   x = 1
@@ -30,22 +21,21 @@ def _comb_rank_lex(c: Iterable, n: int) -> int:
   c = tuple(sorted(c))
   k = len(c)
   index = sum([comb(int(n-ci-1),int(k-i)) for i,ci in enumerate(c)])
-  #index = sum([comb((n-1)-cc, kk) for cc,kk in zip(c, reversed(range(1, len(c)+1)))])
   return int(comb(n, k) - index - 1)
 
 def _comb_rank_colex(c: Iterable) -> int:
   c = tuple(sorted(c))
   k = len(c)
-  #return sum([comb(ci, i+1) for i,ci in zip(reversed(range(len(c))), reversed(c))])
   return sum([comb(ci,k-i) for i,ci in enumerate(reversed(c))])
 
 def _comb_unrank_colex(r: int, k: int) -> tuple:
   """
-  Unranks a k-combinations rank 'r' back into the original combination in colex order
+  Unranks a k-combinations rank 'r' back into the original combination in colex order.
   
-  From: Unranking Small Combinations of a Large Set in Co-Lexicographic Order
+  This function uses a simple unranking process for testing purposes. For more efficient unranking, see `comb_to_rank`. 
   
-  This takes O(k^2 (n - k)) time
+  Assuming comb takes O(min(n-k, k)) time, this function takes O(k^2 (n - k)) time, where n is 
+  the largest integer satisfying 0 <= r < C(n,k).
   """
   c = [0]*k
   for i in reversed(range(1, k+1)): # O(k)
@@ -76,6 +66,7 @@ def comb_to_rank(
 
   From: Unranking Small Combinations of a Large Set in Co-Lexicographic Order
   """
+  n = int(n) if n is not None else None 
   assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
   colex_order = (order == ["colex", "lex"] or order == "colex")
   assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking." # note we need n for colex too!
@@ -127,6 +118,7 @@ def rank_to_comb(
   Returns:
     list : k-combinations derived from R
   """
+  n = int(n) if n is not None else None 
   colex_order = (order == ["colex", "lex"] or order == "colex")
   assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
   if isinstance(R, Integral):
@@ -148,31 +140,7 @@ def rank_to_comb(
       return [_comb_unrank_lex(r, n, k) for r in R]
   else:
     raise ValueError(f"Unknown input type for ranks '{type(R)}'")
-
-  #   if isinstance(k, Integral):
-  #     return SimplexWrapper((comb_unrank_colex(r, k) for r in R), d=k-1)
-  #   else: 
-  #     assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
-  #     return [comb_unrank_colex(r, l) for l, r in zip(k,R)]
-  # else: 
-  #   assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-  #   if isinstance(R, Integral):
-  #     return comb_unrank_colex(R, k=k, n=n)
-  #   if isinstance(k, Integral):
-  #     assert k > 0, f"Invalid cardinality {k}"
-  #     if k == 1:
-  #       return SimplexWrapper(((r,) for r in R), d=0)
-  #     if k == 2:
-  #       return SimplexWrapper((c2_lex_unrank(r, n) for r in R), d=1)
-  #       # return [unrank_C2(r, n) for r in R]
-  #     else: 
-  #       return SimplexWrapper((comb_unrank_lex(r, k, n) for r in R), d=k-1)
-  #       # return [unrank_lex(r, k, n) for r in R]
-  #   else:
-  #     assert len(k) == len(R), "If 'k' is an iterable it must match the size of 'R'"
-  #     return SimplexWrapper((comb_unrank_lex(r, k_) for k_, r in zip(k,R)))
-
-
+  
 def inverse_choose(x: int, k: int, exact: bool = True):
   """Inverse binomial coefficient (approximately). 
 
