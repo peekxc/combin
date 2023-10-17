@@ -12,7 +12,8 @@ namespace py = pybind11;
 #include <algorithm>    // std::copy
 using std::vector; 
 
-auto rank_combs_array(py::array_t< uint16_t, py::array::c_style | py::array::forcecast > combs, const size_t n, bool colex = true) noexcept -> py::array_t< uint64_t > {
+// This function assumes the incoming array has combinations sorted in descending order 
+auto rank_combs_sorted(py::array_t< uint16_t, py::array::c_style | py::array::forcecast > combs, const size_t n, bool colex = true) noexcept -> py::array_t< uint64_t > {
   py::buffer_info buffer = combs.request();
   uint16_t* p = static_cast< uint16_t* >(buffer.ptr);
   const size_t N = buffer.size;
@@ -29,7 +30,7 @@ auto rank_combs_array(py::array_t< uint16_t, py::array::c_style | py::array::for
 }
 
 // Ranks arbitrarily-sized integer combinations from a list into an array 
-auto rank_combs_list(py::list combs, const size_t n, bool colex = true) -> py::array_t< uint64_t >{
+auto rank_combs_unsorted(py::list combs, const size_t n, bool colex = true) -> py::array_t< uint64_t >{
   std::vector< uint64_t > output_ranks;
   output_ranks.reserve(combs.size());
   auto out = std::back_inserter(output_ranks);
@@ -188,8 +189,8 @@ using combinatorial::index_t;
 // Compile: clang -Wall -fPIC -c src/pbsig/combinatorial.cpp -std=c++20 -Iextern/pybind11/include -isystem /Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include -I/Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include/python3.9 
 PYBIND11_MODULE(_combinatorial, m) {
   m.doc() = "Combinatorial module";
-  m.def("rank_combs", &rank_combs_array);
-  m.def("rank_combs", &rank_combs_list);
+  m.def("rank_combs_sorted", &rank_combs_sorted);
+  m.def("rank_combs_unsorted", &rank_combs_unsorted);
   m.def("unrank_combs", &unrank_combranks_array);
   m.def("comb", &comb1);
   m.def("comb", &comb2);

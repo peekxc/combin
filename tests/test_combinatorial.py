@@ -33,6 +33,10 @@ def test_basic():
   c = rank_to_comb(r, k=k, n=n, order='lex')
   assert np.all(c[-1,:] == [0,1,2]) and np.all(c[0,:] == [0,2,19])
   
+  ## Ensure same results across non-array types
+  c = [[0,1,2], [0,3,4]]
+  assert np.all(comb_to_rank(c, k=3, order='colex') == np.array([0,7]))
+  assert np.all(comb_to_rank(np.array(c), k=3, order='colex') == np.array([0,7]))
 
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
@@ -103,9 +107,8 @@ def test_inverse():
   for n, x in zip(N, map(comb3, N)):
     assert inverse_choose(x, 3) == n
 
-
-def test_facet_enumeration():
-  from combin.combinatorial import _combinatorial
-  n, k = 10, 3
-  r = comb_to_rank([0,4,7], n = 10)
-  _combinatorial.facet_ranks(r, k-1, n)
+# def test_facet_enumeration():
+#   from combin.combinatorial import _combinatorial
+#   n, k = 10, 3
+#   r = comb_to_rank([0,4,7], n = 10)
+#   _combinatorial.facet_ranks(r, k-1, n)

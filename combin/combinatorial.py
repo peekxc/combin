@@ -71,7 +71,9 @@ def comb_to_rank(
   colex_order = (order == ["colex", "lex"] or order == "colex")
   assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking." # note we need n for colex too!
   rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
+  
   if isinstance(C, np.ndarray) or isinstance(C, Container):
+    n = (np.max(C)+1) if n is None else n
     if isinstance(C, np.ndarray):
       if C.ndim == 1: 
         assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
@@ -80,15 +82,15 @@ def comb_to_rank(
       C.sort(axis=1)
       C = np.fliplr(C) if colex_order else C
       C = np.array(C, order='K', copy=True) if not C.flags['OWNDATA'] else C # copy if a view was given
+      ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
+      return ranks
     else:
       el, C = spy(C)
       if isinstance(el[0], Integral): return rank_comb_(C)
       assert isinstance(el[0], Container), "Elements must be containers."
       C = list(C)
-    #assert n is not None, "Set cardinality 'n' must be supplied for efficient ranking." # note we need n for colex too!
-    n = (np.max(C)+1) if n is None else n
-    ranks = _combinatorial.rank_combs(C, n, colex_order)
-    return ranks
+      ranks = _combinatorial.rank_combs_unsorted(C, n, colex_order)
+      return ranks
   elif isinstance(C, Iterable):
     # return comb_rank_colex(C) if colex_order else comb_rank_lex(C, n)
     el, C = spy(C)
