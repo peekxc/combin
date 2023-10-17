@@ -221,7 +221,9 @@ jobs:
 
   upload_all:
     needs: [build_linux_wheels, build_macos_wheels, build_windows_wheels, make_sdist]
-    environment: pypi
+    environment: 
+      name: pypi
+      url: https://pypi.org/p/combin
     permissions:
       id-token: write
     runs-on: ubuntu-latest
@@ -231,5 +233,9 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: artifact
+        path: dist
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheels
         path: dist
     - uses: pypa/gh-action-pypi-publish@release/v1
