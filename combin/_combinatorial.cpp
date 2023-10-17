@@ -128,7 +128,34 @@ auto unrank_combranks_array(
 	// inline void unrank_lex(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
 }
 
-using combinatorial::index_t; 
+// using combinatorial::index_t; 
+// auto unrank_combs_unsorted(
+//   const py::array_t< uint64_t >& ranks, 
+//   const size_t n,  
+//   const py::array_t< uint8_t >& K, 
+//   const bool colex,
+//   py::array_t< uint16_t, py::array::c_style | py::array::forcecast >& out
+// ) -> py::array_t< uint64_t >{
+//   std::vector< uint64_t > output_ranks;
+//   output_ranks.reserve(combs.size());
+//   auto out = std::back_inserter(output_ranks);
+//   if (colex) {
+//     for (py::handle obj: combs) {
+//       auto s = obj.cast< std::vector< uint16_t > >();
+//       std::sort(s.begin(), s.end(), std::greater<>());
+//       *out++ = combinatorial::rank_colex_k(s.begin(), s.size());
+//     }
+//   } else {
+//     for (py::handle obj: combs) {
+//       auto s = obj.cast< std::vector< uint16_t > >();
+//       std::sort(s.begin(), s.end(), std::less<>());
+//       const size_t k = s.size();
+//       const size_t N = combinatorial::BinomialCoefficient< true >(n, k);
+//       *out++ = combinatorial::rank_lex_k(s.begin(), n, k, N);
+//     }
+// 	}
+//   return py::cast(output_ranks);
+// }
 
 // 5,3,0
 // auto enumerate_cofacets(index_t r, const size_t k, const size_t n) -> py::array_t< uint64_t > {

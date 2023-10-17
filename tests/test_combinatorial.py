@@ -38,6 +38,14 @@ def test_basic():
   assert np.all(comb_to_rank(c, k=3, order='colex') == np.array([0,7]))
   assert np.all(comb_to_rank(np.array(c), k=3, order='colex') == np.array([0,7]))
 
+  ## Test you can pass varying k 
+  K = [3]*len(r)
+  C_vary = rank_to_comb(r, K, n=n, order='lex')
+  C_vect = rank_to_comb(r, k=3, n=n, order='lex')
+  assert np.all(np.array(C_vary) == C_vect)
+  assert rank_to_comb([0,3,4], [1,2,3]) == [(0,), (0, 3), (0, 1, 4)]
+
+
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
   assert all(_combinatorial.comb([1,2,3],[0,0,0]) == np.array([1,1,1]))

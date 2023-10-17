@@ -73,8 +73,8 @@ def comb_to_rank(
   rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
   
   if isinstance(C, np.ndarray) or isinstance(C, Container):
-    n = (np.max(C)+1) if n is None else n
     if isinstance(C, np.ndarray):
+      n = (np.max(C)+1) if n is None else n
       if C.ndim == 1: 
         assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
         return rank_comb_(C)
@@ -89,6 +89,7 @@ def comb_to_rank(
       if isinstance(el[0], Integral): return rank_comb_(C)
       assert isinstance(el[0], Container), "Elements must be containers."
       C = list(C)
+      n = np.max([max(c) for c in C]) + 1 if n is None else n
       ranks = _combinatorial.rank_combs_unsorted(C, n, colex_order)
       return ranks
   elif isinstance(C, Iterable):
@@ -125,7 +126,7 @@ def rank_to_comb(
   assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
   if isinstance(R, Integral):
     return _comb_unrank_colex(R, k=k) if colex_order else _comb_unrank_lex(R, k=k, n=n)
-  elif isinstance(R, np.ndarray):
+  elif isinstance(R, np.ndarray) and isinstance(k, Integral):
     assert R.ndim == 1, "Ranks must be one-dimensional array."
     R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
     R = np.array(R, order='K', copy=True) if not R.flags['OWNDATA'] else R # copy if view was given
@@ -134,12 +135,22 @@ def rank_to_comb(
     _combinatorial.unrank_combs(R, n, k, colex_order, C)
     C.sort(axis=1) ## TODO: consider adding a flag 
     return C 
+    # else: 
+    #   assert isinstance(k, np.ndarray), "If R is given as an ndarray and k is a sequence, k must also be an array."
+    #   K = np.array(k, order='K', copy=True) if not k.flags['OWNDATA'] else k # copy if view was given
+    #   assert len(K) == len(R), "If K is given as a sequence, it must have the same length as the ranks sequence 'R'."
+    #   n = inverse_choose(np.max(R[K == np.max(K)]), k, exact=False) if n is None else n
+    #   C = np.empty(shape=np.sum(K), dtype=np.uint16)
+    #   _combinatorial.unrank_combs(R, n, K, colex_order, C)
+    #   C.sort(axis=1) ## TODO: consider adding a flag 
   elif isinstance(R, Iterable):
+    K = [k]*len(R) if isinstance(k, Integral) else k
+    assert len(K) == len(R), "If given as a sequence, k must match the length of the ranks sequence 'R'."
     if colex_order:
-      return [_comb_unrank_colex(r, k) for r in R]
+      return [_comb_unrank_colex(r, k) for r,k in zip(R,K)]
     else:
       assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-      return [_comb_unrank_lex(r, n, k) for r in R]
+      return [_comb_unrank_lex(r, n, k) for r,k in zip(R,K)]
   else:
     raise ValueError(f"Unknown input type for ranks '{type(R)}'")
   
