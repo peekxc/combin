@@ -1,4 +1,7 @@
 # combin
+![macos workflow status](https://img.shields.io/github/actions/workflow/status/peekxc/combin/build_macos.yml?logo=apple&logoColor=white)
+![windows workflow status](https://img.shields.io/github/actions/workflow/status/peekxc/combin/build_windows.yml?logo=windows&logoColor=white)
+![linux workflow status](https://img.shields.io/github/actions/workflow/status/peekxc/combin/build_linux.yml?logo=linux&logoColor=white)
 
 Lightweight implementation of various routines known in combinatorics (Under construction!)
 
