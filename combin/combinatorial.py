@@ -173,7 +173,7 @@ def inverse_choose(x: int, k: int, exact: bool = True):
   if k == 2:
     rng = np.arange(np.floor(np.sqrt(2*x)), np.ceil(np.sqrt(2*x)+2) + 1, dtype=np.uint64)
     final_n = rng[np.searchsorted((rng * (rng - 1) / 2), x)]
-    if comb(final_n, 2) == x:
+    if comb(final_n, 2) == x or exact == False:
       return final_n
     raise ValueError(f"Failed to invert C(n,{k}) = {x}")
     # return int(rng[x == (rng * (rng - 1) / 2)])
