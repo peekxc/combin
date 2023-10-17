@@ -4,7 +4,7 @@ requires = ["meson-python", "ninja",  "wheel", "numpy", "pybind11"]
 
 [project]
 name = "combin"
-version = '0.0.5'
+version = '0.0.6'
 readme = "README.md"
 classifiers = [
 	"Intended Audience :: Science/Research",
