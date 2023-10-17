@@ -4,7 +4,6 @@ from itertools import combinations, product
 from functools import partial
 from combin import comb_to_rank, rank_to_comb, inverse_choose
 from combin.combinatorial import _combinatorial, _comb_unrank_colex, _comb_rank_colex
-
 # print(__file__)
 
 def test_basic():
@@ -14,7 +13,6 @@ def test_basic():
   combs_test_cpp = rank_to_comb(ranks, k=k, order="colex")
   assert np.all(np.array([c1,c2], dtype=np.uint64) == combs_test_cpp)
 
-  from scipy.special import comb
   n, k = 20, 5
   c = [2,4,13,15,19]
   r = _comb_rank_colex(c)
