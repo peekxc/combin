@@ -1,8 +1,12 @@
-name: Package Wheels
+name: Package Wheels and upload to PyPI
 
 on:
-  release:
+  workflow_dispatch:
+  pull_request:
+  push:
     branches: [ "main" ]
+  release:
+    types: ["published"]
 
 jobs:
   build_windows_wheels:
@@ -215,16 +219,17 @@ jobs:
       with:
         path: dist/*.tar.gz
 
-  # upload_all:
-  #   needs: [build_linux_wheels, build_macos_wheels, build_windows_wheels, make_sdist]
-  #   environment: pypi
-  #   permissions:
-  #     id-token: write
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'release' && github.event.action == 'published'
-  #   steps:
-  #   - uses: actions/download-artifact@v3
-  #     with:
-  #       name: artifact
-  #       path: dist
-  #   - uses: pypa/gh-action-pypi-publish@release/v1
+  upload_all:
+    needs: [build_linux_wheels, build_macos_wheels, build_windows_wheels, make_sdist]
+    environment: pypi
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: artifact
+        path: dist
+    - uses: pypa/gh-action-pypi-publish@release/v1
