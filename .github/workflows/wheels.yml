@@ -242,7 +242,6 @@ jobs:
       with:
         skip-existing: true
         verbose: true
-    - name: pypi-publish
     - uses: pypa/gh-action-pypi-publish@v1.8.10
       with:
         verbose: true
