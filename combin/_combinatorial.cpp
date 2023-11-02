@@ -52,7 +52,6 @@ auto rank_combs_unsorted(py::list combs, const size_t n, bool colex = true) -> p
   return py::cast(output_ranks);
 }
 
-
 auto comb1(const py::array_t< uint64_t >& N, const py::array_t< uint64_t >& K) -> py::array_t< uint64_t > {
   if (N.size() != K.size()){ throw std::invalid_argument("N adn K must match."); }
   const size_t array_sz = N.size();  
@@ -126,6 +125,42 @@ auto unrank_combranks_array(
     combinatorial::unrank_combs< false >(inp_ptr, inp_ptr + ranks.size(), n, k, out_ptr);
   }
 	// inline void unrank_lex(InputIt s, const InputIt e, const size_t n, const size_t k, OutputIt out){
+}
+
+auto unrank_combranks_array_full_k(
+  const py::array_t< uint64_t >& ranks, 
+  const size_t n,  
+  const py::array_t< uint16_t >& K, 
+  const size_t max_k, 
+  const bool colex,
+  py::array_t< uint16_t, py::array::c_style | py::array::forcecast >& out
+){
+  const uint64_t* inp_ptr = static_cast< const uint64_t* >(ranks.data()); 
+  uint16_t* out_ptr = static_cast< uint16_t* >(out.mutable_data()); 
+  // Moved to precondition
+  // // Preallocate the array to store the integers
+  // const size_t array_sz = std::accumulate(K.begin(), K.end(), 0);
+  // auto output_combs = std::vector< uint64_t >();
+  // output_combs.reserve(array_sz);
+  // auto out = std::back_inserter(output_combs);
+  
+  // Do the unranking
+  combinatorial::BC.precompute(n, max_k); // precompute all (n*k) binomial coefficients 
+  const uint64_t* RA = static_cast< const uint64_t* >(ranks.data()); 
+  const uint16_t* KA = static_cast< const uint16_t* >(K.data()); 
+  const size_t M = static_cast< const size_t >(ranks.shape(0));
+  if (colex){
+    for (auto i = 0; i < M; ++i){
+      combinatorial::unrank_colex< true >(RA+i, RA+i+1, n, KA[i], out_ptr);
+      std::reverse(out_ptr, out_ptr + KA[i]);
+      out_ptr += KA[i];
+    }
+  } else {
+    for (auto i = 0; i < M; ++i){
+      combinatorial::unrank_lex< true >(RA+i, RA+i+1, n, KA[i], out_ptr);
+      out_ptr += KA[i];
+    }
+  }
 }
 
 // using combinatorial::index_t; 
@@ -219,6 +254,7 @@ PYBIND11_MODULE(_combinatorial, m) {
   m.def("rank_combs_sorted", &rank_combs_sorted);
   m.def("rank_combs_unsorted", &rank_combs_unsorted);
   m.def("unrank_combs", &unrank_combranks_array);
+  m.def("unrank_combs_k", &unrank_combranks_array_full_k);
   m.def("comb", &comb1);
   m.def("comb", &comb2);
   m.def("comb", &comb3);

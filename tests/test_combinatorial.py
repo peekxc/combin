@@ -41,7 +41,7 @@ def test_basic():
   C_vary = rank_to_comb(r, K, n=n, order='lex')
   C_vect = rank_to_comb(r, k=3, n=n, order='lex')
   assert np.all(np.array(C_vary) == C_vect)
-  assert rank_to_comb([0,3,4], [1,2,3]) == [(0,), (0, 3), (0, 1, 4)]
+  assert list(map(tuple, rank_to_comb([0,3,4], [1,2,3]))) == [(0,), (0, 3), (0, 1, 4)]
 
 
 def test_combs():
@@ -80,6 +80,22 @@ def test_array_conversion():
   x = np.array(rank_to_comb([0,1,2], k=2))
   assert np.all(x == np.array([[0,1], [0,2], [1,2]], dtype=np.uint16))
 
+def test_unranking_raw():
+  n = 10
+  K = np.random.choice([1,2,3], size=25, replace=True).astype(np.uint16)
+  R = np.ravel(np.array([np.random.choice(np.arange(comb(n, k)), size=1) for k in K])).astype(np.uint64)
+  
+  out = np.zeros(K.sum(), dtype=np.uint16)
+  _combinatorial.unrank_combs_k(R, n, K, K.max(), True, out)
+  test = np.array_split(out, np.cumsum(K)[:-1])
+  truth = [rank_to_comb(r, k=k, n=n, order='colex') for r,k in zip(R,K)]
+  assert all([tuple(t1) == tuple(t2) for (t1,t2) in zip(test,truth)])
+
+  truth_lex = [rank_to_comb(r, k=k, n=n, order='lex') for r,k in zip(R,K)]
+  _combinatorial.unrank_combs_k(R, n, K, K.max(), False, out)  
+  test = np.array_split(out, np.cumsum(K)[:-1])
+  assert all([tuple(t1) == tuple(t2) for (t1,t2) in zip(test,truth_lex)])
+
 def test_lex():
   n, k = 10, 3
   ranks = np.array([comb_to_rank(c, k, n, "lex") for c in combinations(range(n), k)])
@@ -93,7 +109,7 @@ def test_lex():
   assert all((combs_truth == combs_truth2).flatten()), "Lex unranking invalid"
 
 def test_api():
-  assert rank_to_comb([0,1,2], k=3) == [(0, 1, 2), (0, 1, 3), (0, 2, 3)]
+  assert np.all(np.array(rank_to_comb([0,1,2], k=3)) == np.array([[0,1,2],[0,1,3],[0,2,3]], dtype=np.uint16))
   assert all(comb_to_rank([(0,1,2), (0,1,3), (0,2,3)], n=4) == [0,1,2])
   n = 20
   for k in range(1, 5):
