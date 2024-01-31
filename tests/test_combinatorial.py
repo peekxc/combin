@@ -43,6 +43,14 @@ def test_basic():
   assert np.all(np.array(C_vary) == C_vect)
   assert list(map(tuple, rank_to_comb([0,3,4], [1,2,3]))) == [(0,), (0, 3), (0, 1, 4)]
 
+  ## Test sorted colex 0-based shortcut ranking works
+  from scipy.special import comb 
+  C = np.array([[3, 2],[1, 0], [3, 1], [2, 0], [3, 0], [2, 1]], dtype=np.uint16)
+  r_truth = (comb(C[:,0], 2) + comb(C[:,1], 1)).astype(np.uint16)
+  r_test = comb_to_rank(C, n=4, order='colex')
+  assert np.allclose(r_truth, r_test)
+
+
 
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))

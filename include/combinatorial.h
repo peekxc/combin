@@ -305,12 +305,7 @@ namespace combinatorial {
 	[[nodiscard]]
 	constexpr auto rank_colex_2(index_t i, index_t j) noexcept {
 		assert(i > j); // should be in colex order! 
-		// return BinomialCoefficient< safe >(j, 2) + i;
-		return j*(j-1)/2 + i;
-		// const index_t index = std::accumulate(s, s+k, 0, [&i](index_t val, index_t num){ 
-		// 	return val + BinomialCoefficient< safe >(num, i--); 
-		// });
-		// return index; 
+		return BinomialCoefficient< safe >(j, 1) + BinomialCoefficient< safe >(i, 2);
 	}
 	
 
