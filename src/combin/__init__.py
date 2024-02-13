@@ -1,4 +1,5 @@
 import importlib.metadata
+from pathlib import Path
 __version__ = importlib.metadata.version("combin")
 
 from .combinatorial import * 
@@ -7,13 +8,13 @@ from .combinatorial import *
 def get_include():
   """Return the directory that contains the combin's \\*.h header files.
 
-  Extension modules that need to compile against primate should use this
+  Extension modules that need to compile against combins should use this
   function to locate the appropriate include directory.
 
   Notes: 
     When using `distutils`, for example in `setup.py`:
       ```python
-      import primate
+      import combin
       ...
       Extension('extension_name', ..., include_dirs=[combin.get_include()])
       ...
@@ -26,5 +27,6 @@ def get_include():
       ```
   """
   import os 
-  d = os.path.join(os.path.dirname(__file__), 'include')
+  # d = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'include')
+  d = os.path.join(Path(__file__).parent, 'include')
   return d

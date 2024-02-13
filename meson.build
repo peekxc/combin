@@ -40,10 +40,8 @@ incdir_pybind11 = run_command(py, ['-c', 'import os; os.chdir(".."); import pybi
 ## Header includes
 inc_numpy = include_directories(incdir_numpy)
 inc_pybind11 = include_directories(incdir_pybind11)
-inc_pkg = include_directories('include')
 
-
-subdir('combin')
+subdir('src' / 'combin')
 
 ## Compile the package directory
 # py.install_sources(
