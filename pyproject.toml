@@ -22,5 +22,8 @@ dependencies = [
 ]
 license = {file = "LICENSE"}
 
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov", "pytest-benchmark", "scipy"]
+
 [tool.meson-python.args]
 setup = ['--default-library=static']

@@ -50,8 +50,6 @@ def test_basic():
   r_test = comb_to_rank(C, n=4, order='colex')
   assert np.allclose(r_truth, r_test)
 
-
-
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
   assert all(_combinatorial.comb([1,2,3],[0,0,0]) == np.array([1,1,1]))
