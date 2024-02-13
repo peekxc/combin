@@ -221,7 +221,7 @@ jobs:
 
   upload_all:
     needs: [build_linux_wheels, build_macos_wheels, build_windows_wheels, make_sdist]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # if: startsWith(github.ref, 'refs/tags/v') # this doesn't work
     environment: 
       name: pypi
       url: https://pypi.org/p/combin
