@@ -4,7 +4,7 @@ requires = ["meson-python", "ninja",  "wheel", "numpy", "pybind11"]
 
 [project]
 name = "combin"
-version = '0.0.8'
+version = '0.1.0'
 readme = "README.md"
 classifiers = [
 	"Intended Audience :: Science/Research",
@@ -23,7 +23,13 @@ dependencies = [
 license = {file = "LICENSE"}
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-cov", "pytest-benchmark", "scipy"]
+test = ["pytest", "pytest-cov", "pytest-benchmark", "coverage"]
 
 [tool.meson-python.args]
 setup = ['--default-library=static']
+
+[tool.cibuildwheel]
+test-requires = ["pytest", "pytest-cov", "pytest-benchmark", "coverage"]
+test-command = "python -m pytest {package}/tests/ --cov={package} --benchmark-skip"
+build-verbosity = 1
+skip = "cp36-* pp* cp37-* *_ppc64le *_i686 *_s390x *-musllinux*" # todo: revisit musllinux

@@ -6,6 +6,9 @@ from combin import comb_to_rank, rank_to_comb, inverse_choose
 from combin.combinatorial import _combinatorial, _comb_unrank_colex, _comb_rank_colex
 # print(__file__)
 
+def Comb(x: np.ndarray, k: int) -> np.ndarray:
+  return np.array([comb(xi, k) for xi in x]).astype(np.int64)
+
 def test_basic():
   n, k = 10,3
   c1, c2 = [0,1,2], [0,1,3]
@@ -44,9 +47,8 @@ def test_basic():
   assert list(map(tuple, rank_to_comb([0,3,4], [1,2,3]))) == [(0,), (0, 3), (0, 1, 4)]
 
   ## Test sorted colex 0-based shortcut ranking works
-  from scipy.special import comb 
   C = np.array([[3, 2],[1, 0], [3, 1], [2, 0], [3, 0], [2, 1]], dtype=np.uint16)
-  r_truth = (comb(C[:,0], 2) + comb(C[:,1], 1)).astype(np.uint16)
+  r_truth = (Comb(C[:,0], 2) + Comb(C[:,1], 1)).astype(np.uint16)
   r_test = comb_to_rank(C, n=4, order='colex')
   assert np.allclose(r_truth, r_test)
 
