@@ -187,7 +187,7 @@ namespace combinatorial {
 		void precompute(index_t n, index_t k){
 			pre_n = n;
 			pre_k = k;
-			BT = vector< vector< index_t > >(k + 1, vector< index_t >(n + 1, 0));
+			BT = std::vector< std::vector< value_t > >(k + 1, std::vector< value_t >(n + 1, 0));
 			for (index_t i = 0; i <= n; ++i) {
 				BT[0][i] = 1;
 				for (index_t j = 1; j < std::min(i, k + 1); ++j){

@@ -34,12 +34,12 @@ py.install_sources(
 )
 py.install_sources(
   include_sources,
-  subdir: 'combin' / 'include', # keep as package name
+  subdir: 'combin' / 'include' / 'combin', # installs include files under combin namespace
   pure: false        # Will be installed next to binaries
 )
 py.install_sources(
   include_utility_sources,
-  subdir: 'combin' / 'include' / 'utility', # keep as package name
+  subdir: 'combin' / 'include' / 'combin' / 'utility', # installs include files under combin/utility namespace
   pure: false        # Will be installed next to binaries
 )
 # install_data(include_sources, install_dir: py.get_install_dir())
