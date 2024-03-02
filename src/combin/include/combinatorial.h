@@ -457,23 +457,56 @@ namespace combinatorial {
 	// For examle, assuming the sequence is sorted like: 
 	// v = { true, true, true, false, false, false, false }
 	// In this case, get_max(v.size()-1, v, v.operator[]) returns the index 2. 
-	template <class Predicate>
+	// template <class Predicate>
+	// [[nodiscard]]
+	// index_t get_max(index_t top, const index_t bottom, const Predicate pred) noexcept {
+	// 	if (!pred(top)) {
+	// 		index_t count = top - bottom;
+	// 		while (count > 0) {
+	// 			index_t step = count >> 1, mid = top - step;
+	// 			if (!pred(mid)) {
+	// 				top = mid - 1;
+	// 				count -= step + 1;
+	// 			} else {
+	// 				count = step;
+	// 			}
+	// 		}
+	// 	}
+	// 	return top;
+	// }
+
+	// Finds the largest index i in the range [bottom, top] wherein pred(i) == true by exponential search or binary search. 
+	// Ex: if v = { true, true, true, false, false, false, false }, then 
+	// 				get_max(v.size()-1, 0, v.operator[]) returns 2. 
+	template < bool ExpSearch = false, class Predicate >
 	[[nodiscard]]
-	index_t get_max(index_t top, const index_t bottom, const Predicate pred) noexcept {
-		if (!pred(top)) {
-			index_t count = top - bottom;
-			while (count > 0) {
-				index_t step = count >> 1, mid = top - step;
-				if (!pred(mid)) {
-					top = mid - 1;
-					count -= step + 1;
-				} else {
-					count = step;
-				}
+	index_t get_max(index_t top, index_t bottom, const Predicate pred) noexcept {
+		if (!pred(bottom)) { return bottom; }
+  	index_t size = (top - bottom);
+		if constexpr (ExpSearch){
+			index_t inc = 1;
+			while ((bottom + inc) < top && pred(bottom + inc)){
+				inc = inc << 1;
+			}
+			bottom = std::max(bottom, index_t((bottom + inc) / 2));
+			top = std::min(bottom + inc, top);
+			size = (top - bottom);
+		}
+		while (size > 0){
+			index_t step = size >> 1;
+			index_t mid = top - step;
+			if (!pred(mid)){
+				top = mid - 1;
+				size -= step + 1;
+			} else {
+				size = step;
 			}
 		}
-		return top;
+  	return top;
 	}
+
+	// ~ 4 KB of 
+	const std::array< int > R = {1,1,3,6,10,16,21,28,36,45,55,67,78,91,105,120,136,154,171,190,210,231,253,277,300,325,351,378,406,436,465,496,528,561,595,631,666,703,741,780,820,862,903,946,990,1035,1081,1129,1176,1225,1275,1326,1378,1432,1485,1540,1596,1653,1711,1771,1830,1891,1953,2016,2080,2146,2211,2278,2346,2415,2485,2557,2628,2701,2775,2850,2926,3004,3081,3160,3240,3321,3403,3487,3570,3655,3741,3828,3916,4006,4095,4186,4278,4371,4465,4561,4656,4753,4851,4950,5050,5152,5253,5356,5460,5565,5671,5779,5886,5995,6105,6216,6328,6442,6555,6670,6786,6903,7021,7141,7260,7381,7503,7626,7750,7876,8001,8128,8256,8385,8515,8647,8778,8911,9045,9180,9316,9454,9591,9730,9870,10011,10153,10297,10440,10585,10731,10878,11026,11176,11325,11476,11628,11781,11935,12091,12246,12403,12561,12720,12880,13042,13203,13366,13530,13695,13861,14029,14196,14365,14535,14706,14878,15052,15225,15400,15576,15753,15931,16111,16290,16471,16653,16836,17020,17206,17391,17578,17766,17955,18145,18337,18528,18721,18915,19110,19306,19504,19701,19900,20100,20301,20503,20707,20910,21115,21321,21528,21736,21946,22155,22366,22578,22791,23005,23221,23436,23653,23871,24090,24310,24532,24753,24976,25200,25425,25651,25879,26106,26335,26565,26796,27028,27262,27495,27730,27966,28203,28441,28681,28920,29161,29403,29646,29890,30136,30381,30628,30876,31125,31375,31627,31878,32131,32385,32640,32896,33154,33411,33670,33930,34191,34453,34717,34980,35245,35511,35778,36046,36316,36585,36856,37128,37401,37675,37951,38226,38503,38781,39060,39340,39622,39903,40186,40470,40755,41041,41329,41616,41905,42195,42486,42778,43072,43365,43660,43956,44253,44551,44851,45150,45451,45753,46056,46360,46666,46971,47278,47586,47895,48205,48517,48828,49141,49455,49770,50086,50404,50721,51040,51360,51681,52003,52327,52650,52975,53301,53628,53956,54286,54615,54946,55278,55611,55945,56281,56616,56953,57291,57630,57970,58312,58653,58996,59340,59685,60031,60379,60726,61075,61425,61776,62128,62482,62835,63190,63546,63903,64261,64621,64980,65341,65703,66066,66430,66796,67161,67528,67896,68265,68635,69007,69378,69751,70125,70500,70876,71254,71631,72010,72390,72771,73153,73537,73920,74305,74691,75078,75466,75856,76245,76636,77028,77421,77815,78211,78606,79003,79401,79800,80200,80602,81003,81406,81810,82215,82621,83029,83436,83845,84255,84666,85078,85492,85905,86320,86736,87153,87571,87991,88410,88831,89253,89676,90100,90526,90951,91378,91806,92235,92665,93097,93528,93961,94395,94830,95266,95704,96141,96580,97020,97461,97903,98347,98790,99235,99681,100128,100576,101026,101475,101926,102378,102831,103285,103741,104196,104653,105111,105570,106030,106492,106953,107416,107880,108345,108811,109279,109746,110215,110685,111156,111628,112102,112575,113050,113526,114003,114481,114961,115440,115921,116403,116886,117370,117856,118341,118828,119316,119805,120295,120787,121278,121771,122265,122760,123256,123754,124251,124750,125250,125751,126253,126757,127260,127765,128271,128778,129286,129796,130219}
 
 	// Find a good lower bound to initiate the search for the value k satisfying choose(k-1, m) <= r < choose(k, m)
 	// From: Kruchinin, Vladimir, et al. "Unranking Small Combinations of a Large Set in Co-Lexicographic Order." Algorithms 15.2 (2022): 36.
@@ -482,14 +515,31 @@ namespace combinatorial {
 	[[nodiscard]]
 	constexpr auto find_k(const index_t r, const index_t m) noexcept -> index_t {
 		assert(m > 0); // m should never be zero probably
-		if (r == 0){ return m; } 
-		else if (m == 1){ return r; }
-		else if (m == 2){ return std::ceil((1.0+std::sqrt(1+8*static_cast<float>(r)))/2.f); }
-		else if (m == 3){ return std::ceil(std::pow(6*static_cast<float>(r), 1.f/3.f)); }
-		else { 
-			return static_cast< index_t >(m); // the final bound they compute didn't make sense in my tests, so we return m - 1.
+		if (r == 0){ return std::max(m - 1, index_t(0)); } 
+		switch(m){
+			case 1:
+				return r;
+			case 2:
+				return std::max(std::ceil((1.0+std::sqrt(1+8*static_cast<float>(r)))/2.f) - 1.0, 0.0);
+			case 3: 
+				return std::max(std::ceil(std::pow(6*static_cast<float>(r), 1.f/3.f)) - 1.0, 0.0);
+			default: 
+				return std::max(m - 1, index_t(0));
 		}
 	}
+
+// else if (m == 2){ return std::ceil((1.0+std::sqrt(1+8*static_cast<float>(r)))/2.f); }
+// else if (m == 3){ return std::ceil(std::pow(6*static_cast<float>(r), 1.f/3.f)); }
+// else { 
+// 	return static_cast< index_t >(m); // the final bound they compute didn't make sense in my tests, so we return m - 1.
+// }
+// else if (m == 1){ return r; }
+// else if (m == 2){ return std::ceil((1.0+std::sqrt(1+8*static_cast<float>(r)))/2.f); }
+// else if (m == 3){ return std::ceil(std::pow(6*static_cast<float>(r), 1.f/3.f)); }
+// else { 
+// 	return static_cast< index_t >(m); // the final bound they compute didn't make sense in my tests, so we return m - 1.
+// }
+
 
 	// Binary searches for the value K satisfying choose(K-1, m) <= r < choose(K, m) 
 	// This implements two algorithms: 
@@ -497,48 +547,44 @@ namespace combinatorial {
 	// (2) Second, a constant number of comparisons are done to check the tightness of the approximation, returning early if successful
 	// (3) If (1) and (2) fail, then the range [k-1, n] is searched for the largest index _w_ satisfying r >= choose(w,k) via binary search
 	// k >= 1, N <= n - 1, 0 <= r < choose(n,k)
-	template< bool safe = true, size_t K = 0 > 
+	template< bool safe = true, bool use_lb = true, bool ExpSearch = false, size_t C = 0 > 
 	[[nodiscard]]
 	index_t get_max_vertex(const index_t r, const index_t m, const index_t n) noexcept {
-		// return get_max(n, k-1, [&](index_t w) -> bool { return r >= BinomialCoefficient< safe >(w, k); });
-		// std::cout << "r: " << r << ", " << "m: " << m << std::endl;
-		index_t k_lb = find_k(r,m); 								// finds k such that comb(k-1, m) <= r
-		// std::cout << "k lb (find_k): " << k_lb << ", m: " << m << std::endl;
-		assert(k_lb >= 1); 																// It should be a positive integer!
-		assert(BinomialCoefficient< safe >(k_lb - 1, m) <= r);		  // it should be a lower bound!
-		if constexpr (K == 0){
-			k_lb = get_max(n, k_lb+2, [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; }); // should be <= to find UB
-			return k_lb+1;
-		} else if constexpr (K == 1){
-			if (r < BinomialCoefficient< safe >(k_lb, m)){ return k_lb; }
-			k_lb = get_max(n, k_lb+2, [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; }); // should be <= to find UB
-			return k_lb+1;
-		} else if constexpr (K == 2){
-			if (r < BinomialCoefficient< safe >(k_lb, m)){ return k_lb; }
-			if (r < BinomialCoefficient< safe >(k_lb+1,m)){ return k_lb+1; }
-			k_lb = get_max(n, k_lb+2, [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; }); // should be <= to find UB
-			return k_lb+1;
+		index_t k_lb;
+		const auto pred = [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; };
+		if constexpr(use_lb){
+			k_lb = find_k(r,m); // finds k such that comb(k-1, m) <= r
+		} else {
+			k_lb = m-1; 
+		}
+		assert(k_lb >= 0);  // It should be a non-negative integer!
+		assert(pred(k_lb));	// it should be a lower bound!
+
+		if constexpr (C == 0){
+			return get_max< ExpSearch >(n, k_lb, pred) + 1;
+		} else if constexpr (C == 1){
+			if (!pred(k_lb + 1)){ return k_lb+1; }
+			return get_max< ExpSearch >(n, k_lb, pred) + 1;
+		} else if constexpr (C == 2){
+			if (!pred(k_lb + 1)){ return k_lb+1; }
+			if (!pred(k_lb + 2)){ return k_lb+2; }
+			return get_max< ExpSearch >(n, k_lb, pred) + 1; 
 		} else { // (K >= 3)
-			if (r < BinomialCoefficient< safe >(k_lb, m)){ return k_lb; }
-			if (r < BinomialCoefficient< safe >(k_lb+1,m)){ return k_lb+1; }
-			if (r < BinomialCoefficient< safe >(k_lb+2,m)){ return k_lb+2; }
-			k_lb = get_max(n, k_lb+2, [r,m](index_t w) -> bool { return BinomialCoefficient< safe >(w, m) <= r; }); // should be <= to find UB
-			return k_lb+1;
+			if (!pred(k_lb + 1)){ return k_lb+1; }
+			if (!pred(k_lb + 2)){ return k_lb+2; }
+			if (!pred(k_lb + 3)){ return k_lb+3; }
+			return get_max< ExpSearch >(n, k_lb, pred) + 1; 
 		}
 	}
 
 	// Successively unranks each k-combination of a n-set into out
-	template < bool safe = true, typename InputIt, typename OutputIt >
+	template < bool safe = true, bool use_lb = false, bool ExpSearch = false, size_t C = 0, typename InputIt, typename OutputIt >
 	void unrank_colex(InputIt s, const InputIt e, const index_t n, const index_t k, OutputIt out) noexcept {
 		for (index_t K = n - 1; s != e; ++s){
-			
-			// --- Unrank r ---
-			// Should these default to safe=false or based on template?  
 			index_t r = static_cast< index_t >(*s); 
 			for (index_t m = k; m > 1; --m) {
-				K = get_max_vertex< safe >(r, m, n); // k satisfying comb(k-1,m) <= r < comb(k, m)
-				// std::cout << "r: " << r << ", k: " << k << ", m: " << m << ", K: " << K << ", n: " << n << std::endl;
-				*out++ = K-1;	// this differs from the paper because we want 0-based indices
+				K = get_max_vertex< safe, use_lb, ExpSearch, C >(r, m, n); // k satisfying comb(k-1,m) <= r < comb(k, m)
+				*out++ = K-1;												 // this differs from the paper because we want 0-based indices
 				r -= BinomialCoefficient< safe >(K-1, m); // TODO: how to fix this 
 			}
 			*out++ = r;

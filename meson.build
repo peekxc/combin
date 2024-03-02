@@ -6,7 +6,8 @@ project(
     'buildtype=debugoptimized', 
     'cpp_std=c++20', 
     'warning_level=2', 
-    'pkgconfig.relocatable=true'
+    'pkgconfig.relocatable=true', 
+    'optimization=2'
   ]
 )
 

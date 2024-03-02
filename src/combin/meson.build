@@ -20,7 +20,6 @@ include_sources = [
 ]
 include_utility_sources = [
   'include' / 'utility' / 'combinations.h',
-  'include' / 'utility' / 'discrete.h',
   'include' / 'utility' / 'set_utilities.h',
   'include' / 'utility' / 'short_alloc.h'
 ]

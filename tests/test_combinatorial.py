@@ -197,21 +197,22 @@ def find_k(r: int, m: int):
 def get_max_vertex(r: np.ndarray, m: int, n: int, exp: bool = False, use_lb: bool = False, C: int = 0):
   k_lb = find_k(r,m) if use_lb else max(m - 1, 0)
   assert comb(k_lb, m) <= r
+  pred = lambda c: comb(c, m) <= r
   if C == 0: 
-    c = get_max(n, k_lb, lambda c: comb(c, m) <= r, exp=exp)
+    c = get_max(n, k_lb, pred, exp=exp)
   elif C == 1: 
-    if r < comb(k_lb+1, m):
+    if not pred(k_lb + 1): #r < comb(k_lb+1, m):
       return k_lb + 1
-    c = get_max(n, k_lb, lambda c: comb(c, m) <= r, exp=exp)
+    c = get_max(n, k_lb, pred, exp=exp)
   elif C == 2:
-    if r < comb(k_lb+1, m): return k_lb + 1
-    if r < comb(k_lb+2, m): return k_lb + 2
-    c = get_max(n, k_lb, lambda c: comb(c, m) <= r, exp=exp)
+    if not pred(k_lb + 1): return k_lb + 1
+    if not pred(k_lb + 2): return k_lb + 2
+    c = get_max(n, k_lb, pred, exp=exp)
   else: 
-    if r < comb(k_lb+1, m): return k_lb + 1
-    if r < comb(k_lb+2, m): return k_lb + 2
-    if r < comb(k_lb+2, m): return k_lb + 3
-    c = get_max(n, k_lb, lambda c: comb(c, m) <= r, exp=exp)
+    if not pred(k_lb + 1): return k_lb + 1
+    if not pred(k_lb + 2): return k_lb + 2
+    if not pred(k_lb + 3): return k_lb + 3
+    c = get_max(n, k_lb, pred, exp=exp)
   assert comb(c, m) <= r and r < comb(c + 1, m) 
   return c+1 
 
@@ -236,7 +237,7 @@ def test_get_max():
   assert get_max(10, 0, lambda x: x > 0) == 0
 
   # n, m = 1350, 3
-  n,m = 100, 3
+  n,m = 50, 3
   R = np.arange(comb(n,m))
   ## "When k = m, we search the interval that contains the rank r among the following binomial coefficients"
   potential_K = np.arange(m, n+1)
@@ -303,7 +304,7 @@ def test_get_max():
     np.allclose(simplex_test, simplex_true)
 
   ## Check out performance 
-  C = 3
+  C = 2
   N_BIN, N_EXP = 0, 0
   simplices1 = np.array([unrank_colex(r, n, m, C=C) for r in R])
   # unrank_colex(r, n, m, exp=False)
@@ -329,3 +330,88 @@ def test_get_max():
   ## Plain exponential search is abotu 2.5x worse than plain binary search! 
   ## On the other hand: exp search + LB is about 2x better binary search
   ## Setting C ~= 2 or 3 has a massive reduction
+
+def test_colex_cpp():
+  n,m = 50, 3
+  R = np.arange(comb(n,m))
+  potential_K = np.arange(m, n+1)
+  BR = np.array([comb(c, m) for c in potential_K]) # the range 
+  
+  for r in R:
+    max_i = get_max(n, m-1, lambda w: comb(w, m) <= r) 
+    max_j = _combinatorial.get_max(r, m, n)
+    assert max_i == max_j
+  
+  for r in R:
+    k_lb = _combinatorial.find_k(r, m)
+    assert comb(k_lb, m) <= r
+
+  for r in R:
+    vi = _combinatorial.get_max_vertex(0, m, n, False, 0)
+    vj = get_max_vertex(0, m, n, use_lb=False, C=0)
+    assert vi == vj
+
+  ## Ensure we're getting all the combinations
+  from itertools import combinations
+  combs_test = np.array([unrank_colex(r, n, m, C=0) for r in R])
+  combs_test.sort(axis=1)
+  combs_test = combs_test[np.lexsort(np.rot90(combs_test))]
+  combs_truth = np.array(list(combinations(range(n), m)))
+  assert np.all(combs_test == combs_truth)
+
+  n, m = 50, 3
+  R = np.arange(comb(n, m), dtype=np.int64)
+  C_test = np.zeros((comb(n, m), m), dtype=np.uint16)
+  _combinatorial.unrank_colex_bench(R, n, m, 0, C_test)
+  assert len(np.unique(C_test, axis=1)) == comb(n,m), "Redudant combo detected!"
+
+  from itertools import combinations
+  C_test.sort(axis=1)
+  C_test = C_test[np.lexsort(np.rot90(C_test))]
+  C_truth = np.array([np.array(list(c)) for c in combinations(range(n), m)])
+  assert np.all(C_test == C_truth)
+
+from itertools import combinations, product
+def bench_colex_unranking():
+  n, m = 50, 3
+  R = np.arange(comb(n, m), dtype=np.int64)
+  C_truth = np.array([np.array(list(c)) for c in combinations(range(n), m)])
+
+  C_test = np.zeros((comb(n, m), m), dtype=np.uint16)
+  for use_lb, use_exp, C in product([False, True], [False, True], [0,1,2,3]):
+    _combinatorial.unrank_colex_bench(R, n, m, use_lb, use_exp, C, C_test)
+    C_test.sort(axis=1)
+    C_test = C_test[np.lexsort(np.rot90(C_test))]
+    assert np.all(C_test == C_truth)
+  
+  ## Whoa, using EXP search was slightly worth it, but computing the LB is slow!
+  ## Surprisingly, increasing C doesn't help much!
+  import timeit
+  for use_lb, use_exp, C in product([False, True], [False, True], [0,1,2,3]):
+    res = timeit.timeit(lambda: _combinatorial.unrank_colex_bench(R, n, m, use_lb, use_exp, C, C_test), number = 1500)
+    print(f"{res:.5f} s, LB: {use_lb}, EXP: {use_exp}, C: {C}")
+  
+  from more_itertools import run_length
+  # _d_ <= 3 and _n_ <= ~ 125K
+  # R = np.arange(comb(125000, 3), dtype=np.int64)
+  
+  ## Let's go up to 1M vertices
+  assert comb(100000, 3) < 2 ** 63 - 1
+
+  ## This is like 4 KB to store the RLE 
+  
+  R = np.arange(comb(512, 3), dtype=np.int64)
+  K_cuts = np.maximum(np.ceil(np.power(6*R, 1/3)) - 1, 0)
+  # np.sum(np.diff(K_cuts) == 0) / len(K_cuts)
+  RL = run_length()
+  RLE_3 = list(RL.encode(K_cuts))
+  K_LB_3 = np.array([j for i,j in RLE_3])
+  arr_str = np.array2string(K_LB_3, separator=",", formatter={'int': lambda x: str(x)})
+  assert max(K_LB_3) <= 2**31 - 1
+
+  # from tqdm import tqdm
+  # tqdm()
+  RL(2)
+  
+
+  # C == C_truth

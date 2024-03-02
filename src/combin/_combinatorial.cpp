@@ -135,7 +135,7 @@ auto unrank_combranks_array_full_k(
   const bool colex,
   py::array_t< uint16_t, py::array::c_style | py::array::forcecast >& out
 ){
-  const uint64_t* inp_ptr = static_cast< const uint64_t* >(ranks.data()); 
+  // const uint64_t* inp_ptr = static_cast< const uint64_t* >(ranks.data()); 
   uint16_t* out_ptr = static_cast< uint16_t* >(out.mutable_data()); 
   // Moved to precondition
   // // Preallocate the array to store the integers
@@ -150,13 +150,13 @@ auto unrank_combranks_array_full_k(
   const uint16_t* KA = static_cast< const uint16_t* >(K.data()); 
   const size_t M = static_cast< const size_t >(ranks.shape(0));
   if (colex){
-    for (auto i = 0; i < M; ++i){
+    for (size_t i = 0; i < M; ++i){
       combinatorial::unrank_colex< true >(RA+i, RA+i+1, n, KA[i], out_ptr);
       std::reverse(out_ptr, out_ptr + KA[i]);
       out_ptr += KA[i];
     }
   } else {
-    for (auto i = 0; i < M; ++i){
+    for (size_t i = 0; i < M; ++i){
       combinatorial::unrank_lex< true >(RA+i, RA+i+1, n, KA[i], out_ptr);
       out_ptr += KA[i];
     }
@@ -247,6 +247,85 @@ auto unrank_combranks_array_full_k(
 //   return py::cast(face_ranks);
 // }
 
+void unrank_colex_bench(
+  const py::array_t< combinatorial::index_t >& ranks, 
+  const size_t n,  
+  const size_t m,
+  const bool use_lb, 
+  const bool use_exp, 
+  const size_t C,
+  py::array_t< uint16_t, py::array::c_style | py::array::forcecast >& out
+){    
+  if (n > 65535){ throw std::invalid_argument("n is too large; overflow detected!"); }
+  uint16_t* out_ptr = static_cast< uint16_t* >(out.mutable_data()); 
+  combinatorial::BC.precompute(n, m); // precompute binomial coefficients 
+  auto rb = ranks.data(); 
+  auto re = ranks.data() + ranks.size();
+  if (use_lb && use_exp){
+    // bool safe = true, bool use_lb = true, bool ExpSearch = false
+    switch(C){
+      case 0:
+        combinatorial::unrank_colex< false, true, true, 0 >(rb, re, n, m, out_ptr); 
+        break; 
+      case 1: 
+        combinatorial::unrank_colex< false, true, true, 1 >(rb, re, n, m, out_ptr);
+        break; 
+      case 2: 
+        combinatorial::unrank_colex< false, true, true, 2 >(rb, re, n, m, out_ptr);
+        break; 
+      default: 
+        combinatorial::unrank_colex< false, true, true, 3 >(rb, re, n, m, out_ptr);
+        break; 
+    }
+  } else if (!use_lb && use_exp){
+    switch(C){
+      case 0:
+        combinatorial::unrank_colex< false, false, true, 0 >(rb, re, n, m, out_ptr); 
+        break; 
+      case 1: 
+        combinatorial::unrank_colex< false, false, true, 1 >(rb, re, n, m, out_ptr);
+        break; 
+      case 2: 
+        combinatorial::unrank_colex< false, false, true, 2 >(rb, re, n, m, out_ptr);
+        break; 
+      default: 
+        combinatorial::unrank_colex< false, false, true, 3 >(rb, re, n, m, out_ptr);
+        break; 
+    }
+  }
+  else if (use_lb && !use_exp){
+    switch(C){
+      case 0:
+        combinatorial::unrank_colex< false, true, false, 0 >(rb, re, n, m, out_ptr); 
+        break; 
+      case 1: 
+        combinatorial::unrank_colex< false, true, false, 1 >(rb, re, n, m, out_ptr);
+        break; 
+      case 2: 
+        combinatorial::unrank_colex< false, true, false, 2 >(rb, re, n, m, out_ptr);
+        break; 
+      default: 
+        combinatorial::unrank_colex< false, true, false, 3 >(rb, re, n, m, out_ptr);
+        break; 
+    }
+  }
+  else
+    switch(C){
+      case 0:
+        combinatorial::unrank_colex< false, false, false, 0 >(rb, re, n, m, out_ptr); 
+        break; 
+      case 1: 
+        combinatorial::unrank_colex< false, false, false, 1 >(rb, re, n, m, out_ptr);
+        break; 
+      case 2: 
+        combinatorial::unrank_colex< false, false, false, 2 >(rb, re, n, m, out_ptr);
+        break; 
+      default: 
+        combinatorial::unrank_colex< false, false, false, 3 >(rb, re, n, m, out_ptr);
+        break; 
+    }
+  }
+using combinatorial::index_t; 
 // Package: pip install --no-deps --no-build-isolation --editable .
 // Compile: clang -Wall -fPIC -c src/pbsig/combinatorial.cpp -std=c++20 -Iextern/pybind11/include -isystem /Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include -I/Users/mpiekenbrock/opt/miniconda3/envs/pbsig/include/python3.9 
 PYBIND11_MODULE(_combinatorial, m) {
@@ -260,6 +339,17 @@ PYBIND11_MODULE(_combinatorial, m) {
   m.def("comb", &comb3);
   m.def("comb", &comb4);
   m.def("comb", &comb5);
+  m.def("unrank_colex_bench", &unrank_colex_bench);
+  m.def("get_max_vertex", [](const index_t r, const index_t m, const index_t n, bool use_lb = true, size_t C = 0 ){
+    return use_lb ? combinatorial::get_max_vertex< true, true >(r, m, n) : combinatorial::get_max_vertex< true, false >(r, m, n);
+  });
+  m.def("find_k", [](const index_t r, const index_t m){
+    return combinatorial::find_k(r, m);
+  });
+  m.def("get_max", [](const index_t r, const index_t m, const index_t n){
+		const auto pred = [r,m](index_t w) -> bool { return combinatorial::BinomialCoefficient< true >(w, m) <= r; };
+    return combinatorial::get_max(n, m-1, pred);
+  });
   // m.def("facet_ranks", &enumerate_facets);
   // m.def("unrank_combs", &unrank_combs);
   // m.def("boundary_ranks", &boundary_ranks);
