@@ -593,12 +593,12 @@ namespace combinatorial {
 				return r;
 			case 2:
 				// return std::max(std::ceil((1.0+std::sqrtf(1.f+8.f*r))/2.f) - 1.0, 0.0);
-				return std::ceil((1.0+std::sqrtf(1.f+8.f*r))/2.f) - 1.0;
+				return std::ceil((1.0+std::sqrt(1.f+8.f*r))/2.f) - 1.0;
 				// return ((1+isqrt64_nozero(1+8*r)) >> 2) - 1;
 				// return m - 1;
 			case 3: 
 				// return std::max(std::ceil(std::cbrtf(6.f*r)) - 1.0, 0.0);
-				return std::ceil(std::cbrtf(6.f*r)) - 1.0;
+				return std::ceil(std::cbrt(6.f*r)) - 1.0;
 				// return icbrt64(6 * r); // this is WAY more expensive!
 				// int b = ((64) - __builtin_clzll(r)) + 3; // adjust for multiplying by 6
     		// int k_lb = 1 << (int(b / 3) - 1);
