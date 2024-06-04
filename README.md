@@ -13,7 +13,43 @@ Current routines offered:
 
 ## Usage
 
-```python
-combinations(range(10), 2)
+`combin` supports fast bijections to the combinatorial number system.  
 
+```python
+from combin import comb_to_rank
+
+## Fix k-combinations of an n-set
+n = 10 # universe size 
+k = 3  # size of each combination
+
+## Ranks each 3-tuple into its index in the combinatorial number system  
+C = combinations(range(n), k)
+R = comb_to_rank(C, order='lex', n = n)
+print(R)
+# [0, 1, 2, ..., 119]
+
+## If a generator is given, the default return type is a list
+assert R == list(range(120))
+
+## Alternatively, combin has native support for NumPy arrays
+C = np.fromiter(combinations(range(n), k), dtype=(np.int16, k))
+assert np.all(comb_to_rank(C, order='lex', n=n) == np.arange(comb(n,k)))
+
+## An alternative bijection can also be chosen, such as the colexicographical order
+## Note the colex order doesn't require the universe size (n)
+print(comb_to_rank(C, order='colex'))
+# [0, 1, 4, ..., 119]
+
+## Unranking is just as easy: just supply n, k, and the order
+from combin import rank_to_comb
+R = np.arange(comb(n,k))
+C_lex = rank_to_comb(R, k=k, n=n, order='lex')
+assert np.all(C_lex == C)
+print(C_lex)
+# [[0, 1, 2],
+#  [0, 1, 3],
+#  [0, 1, 4],
+#     ... 
+#  [6, 8, 9],
+#  [7, 8, 9]]
 ```
