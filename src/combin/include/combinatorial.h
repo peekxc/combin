@@ -274,11 +274,15 @@ namespace combinatorial {
 	template< bool safe = true, typename InputIter >
 	[[nodiscard]]
 	inline index_t rank_lex_k(InputIter s, const size_t n, const size_t k, const index_t N){
-		index_t i = k; 
-	  const index_t index = std::accumulate(s, s+k, 0, [n, &i](index_t val, index_t num){ 
-		  return val + BinomialCoefficient< safe >((n-1) - num, i--); 
-		});
-	  const index_t combinadic = (N-1) - index; // Apply the dual index mapping
+		index_t val = 0;
+		for (int64_t i = k; i > 0; --i, ++s){
+			val += BinomialCoefficient< safe >((n-1) - (*s), i);
+		}
+		// STL is apparently unreliable! 
+	  // const index_t index = std::accumulate(s, s+k, 0, [n, &i](index_t val, index_t num){ 
+		//   return val + BinomialCoefficient< safe >((n-1) - num, i--); 
+		// });
+	  const index_t combinadic = (N-1) - val; // Apply the dual index mapping
 	  return combinadic;
 	}
 

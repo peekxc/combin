@@ -68,6 +68,10 @@ def test_basic():
   t2 = np.array([comb_to_rank(c, order='colex', n=n) for c in C])
   assert np.all(t1 == t2), "Inconsistent API's for high-d combinations"
 
+  t1 = comb_to_rank(C.astype(np.uint16), order='lex', n=n)
+  t2 = np.array([comb_to_rank(c, order='lex', n=n) for c in C])
+  assert np.all(t1 == t2), "Inconsistent API's for high-d combinations"
+
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
   assert all(_combinatorial.comb([1,2,3],[0,0,0]) == np.array([1,1,1]))
