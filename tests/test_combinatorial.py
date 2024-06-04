@@ -53,6 +53,21 @@ def test_basic():
   r_test = comb_to_rank(C, n=4, order='colex')
   assert np.allclose(r_truth, r_test)
 
+  ## Overflow counter example - high dimensional example
+  n = 1500
+  C = np.array(
+    [[   0,  106,  158,  206],
+    [   0,  106,  158,  324],
+    [   0,  106,  158,  566],
+    [   0,  106,  158,  663],
+    [   0,  106,  158, 1231]],
+    dtype=np.uint64
+  )
+  assert _combinatorial.comb(n, 4) == comb(n, 4)
+  t1 = comb_to_rank(C.astype(np.uint16), order='colex', n=n)
+  t2 = np.array([comb_to_rank(c, order='colex', n=n) for c in C])
+  assert np.all(t1 == t2), "Inconsistent API's for high-d combinations"
+
 def test_combs():
   assert all(_combinatorial.comb([1,2,3],[1,2,3]) == np.array([1,1,1]))
   assert all(_combinatorial.comb([1,2,3],[0,0,0]) == np.array([1,1,1]))
@@ -362,7 +377,7 @@ def test_colex_cpp():
   n, m = 50, 3
   R = np.arange(comb(n, m), dtype=np.int64)
   C_test = np.zeros((comb(n, m), m), dtype=np.uint16)
-  _combinatorial.unrank_colex_bench(R, n, m, 0, C_test)
+  _combinatorial.unrank_colex_bench(R, n, m, False, False, 0, C_test)
   assert len(np.unique(C_test, axis=1)) == comb(n,m), "Redudant combo detected!"
 
   from itertools import combinations
@@ -373,11 +388,12 @@ def test_colex_cpp():
 
 from itertools import combinations, product
 def bench_colex_unranking():
-  n, m = 50, 3
+  n, m = 800, 3
   R = np.arange(comb(n, m), dtype=np.int64)
-  C_truth = np.array([np.array(list(c)) for c in combinations(range(n), m)])
-
   C_test = np.zeros((comb(n, m), m), dtype=np.uint16)
+
+  ## Actually LB + EXP search + C = 3 is worth it for n > 500!
+  C_truth = np.array([np.array(list(c)) for c in combinations(range(n), m)])
   for use_lb, use_exp, C in product([False, True], [False, True], [0,1,2,3]):
     _combinatorial.unrank_colex_bench(R, n, m, use_lb, use_exp, C, C_test)
     C_test.sort(axis=1)
@@ -386,11 +402,12 @@ def bench_colex_unranking():
   
   ## Whoa, using EXP search was slightly worth it, but computing the LB is slow!
   ## Surprisingly, increasing C doesn't help much!
+  ## Even the fast-to-compute LB of the LB *increases* the computation time! 
   import timeit
   for use_lb, use_exp, C in product([False, True], [False, True], [0,1,2,3]):
-    res = timeit.timeit(lambda: _combinatorial.unrank_colex_bench(R, n, m, use_lb, use_exp, C, C_test), number = 1500)
+    res = timeit.timeit(lambda: _combinatorial.unrank_colex_bench(R, n, m, use_lb, use_exp, C, C_test), number = 150)
     print(f"{res:.5f} s, LB: {use_lb}, EXP: {use_exp}, C: {C}")
-  
+  ## For Larger N (>= 150), EXP = True + LB + C = 3 is the fastest, but main BS w/o LB and C= 0 is stable 
   from more_itertools import run_length
   # _d_ <= 3 and _n_ <= ~ 125K
   # R = np.arange(comb(125000, 3), dtype=np.int64)
@@ -399,7 +416,6 @@ def bench_colex_unranking():
   assert comb(100000, 3) < 2 ** 63 - 1
 
   ## This is like 4 KB to store the RLE 
-  
   R = np.arange(comb(512, 3), dtype=np.int64)
   K_cuts = np.maximum(np.ceil(np.power(6*R, 1/3)) - 1, 0)
   # np.sum(np.diff(K_cuts) == 0) / len(K_cuts)
@@ -412,6 +428,38 @@ def bench_colex_unranking():
   # from tqdm import tqdm
   # tqdm()
   RL(2)
-  
 
-  # C == C_truth
+  ## Efficient lower bound on on find_k (which itself a LB) 
+  
+  for r in R[1:]:
+    b = int(r).bit_length()
+    b = b + 3 # adjust for multiplying by 6
+    k_lb = 2**((b // 3) - 1)
+    assert k_lb <= ceil(np.cbrt(6*r))
+    assert k_lb <= find_k_naive(r, m) 
+    assert k_lb <= find_k(r, m)
+
+
+  assert np.all([2**((int(r).bit_length() - 1) // 3) <= np.cbrt(r) for r in R[1:]])
+
+def icbrt(x: int, c: int = 11) -> int:
+  r0, r1 = 1, 1
+  if x == 0: 
+    return 0
+  b: int = (64) - int(x).bit_length()
+  r0 <<= ceil(b / 3)
+  for _ in range(c):
+    r1 = r0
+    r0 = (2 * r1 + x // (r1 * r1)) // 3
+  return floor(r1)
+
+def msb(val, b: int = 8, aligned: bool = False) -> int:
+  if aligned:
+    return val.to_bytes((val.bit_length() + (b-1)) // b, 'big')[0]
+  else:
+    return val >> (val.bit_length() - b)
+
+def check_bit_length():
+  for w in np.random.choice(range(10000000), size=1500):
+    w = int(w)
+    assert (w*6).bit_length() <= (w.bit_length() + 3)

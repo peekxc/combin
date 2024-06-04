@@ -13,18 +13,19 @@ namespace py = pybind11;
 using std::vector; 
 
 // This function assumes the incoming array has combinations sorted in descending order 
-auto rank_combs_sorted(py::array_t< uint16_t, py::array::c_style | py::array::forcecast > combs, const size_t n, bool colex = true) noexcept -> py::array_t< uint64_t > {
+auto rank_combs_sorted(py::array_t< uint16_t, py::array::c_style | py::array::forcecast > combs, const size_t n, bool colex = true) noexcept -> py::array_t< int64_t > {
   py::buffer_info buffer = combs.request();
   uint16_t* p = static_cast< uint16_t* >(buffer.ptr);
   const size_t N = buffer.size;
   const size_t k = static_cast< size_t >(combs.shape(1));
-  vector< uint64_t > ranks; 
-  ranks.reserve(static_cast< uint64_t >(N/k));
+  vector< int64_t > ranks; 
+  ranks.reserve(static_cast< int64_t >(N/k));
   auto out = std::back_inserter(ranks);
+  combinatorial::BC.precompute(n, k);
 	if (colex) {
-		combinatorial::rank_colex(p, p+N, n, k, out);
+		combinatorial::rank_colex< false >(p, p+N, n, k, out);
 	} else {
-    combinatorial::rank_lex(p, p+N, n, k, out);
+    combinatorial::rank_lex< false >(p, p+N, n, k, out);
 	}
   return py::cast(ranks); 
 }

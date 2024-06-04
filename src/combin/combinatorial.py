@@ -1,6 +1,6 @@
 import numpy as np 
-from typing import * 
-from itertools import * 
+from typing import Iterable, Container, Union
+from itertools import combinations
 from numbers import Integral
 from math import floor, ceil, comb, factorial
 import _combinatorial
@@ -82,6 +82,7 @@ def comb_to_rank(
       C.sort(axis=1)
       C = np.fliplr(C) if colex_order else C
       C = np.array(C, order='K', copy=True) if not C.flags['OWNDATA'] else C # copy if a view was given
+      assert C.flags['OWNDATA'] and C.flags['C_CONTIGUOUS'] and C.flags['ALIGNED'], "ndarray must not be a view"
       ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
       return ranks
     else:
@@ -180,7 +181,7 @@ def inverse_choose(x: int, k: int, exact: bool = True):
   if k == 2:
     rng = np.arange(np.floor(np.sqrt(2*x)), np.ceil(np.sqrt(2*x)+2) + 1, dtype=np.uint64)
     final_n = rng[np.searchsorted((rng * (rng - 1) / 2), x)]
-    if comb(final_n, 2) == x or exact == False:
+    if comb(final_n, 2) == x or not exact:
       return final_n
     raise ValueError(f"Failed to invert C(n,{k}) = {x}")
     # return int(rng[x == (rng * (rng - 1) / 2)])
