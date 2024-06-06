@@ -25,11 +25,12 @@ jobs:
       uses: actions/checkout@v3
       with: 
         submodules: true
-    - name: Set up Clang
-      uses: egor-tensin/setup-clang@v1
-      with:
-        version: latest
-        platform: x64
+    ## NOTE: this installs clang, clang-cl, lld, etc
+    - name: Install Clang using Chocolatey
+      run: |
+        choco install -y llvm --params "clang;compiler=clang" --version 17.0.0
+        $env:PATH = "C:\Program Files\LLVM\bin;$env:PATH"
+        clang --version
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
