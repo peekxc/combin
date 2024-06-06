@@ -28,7 +28,7 @@ jobs:
     ## NOTE: this installs clang, clang-cl, lld, etc
     - name: Install Clang using Chocolatey
       run: |
-        choco install -y llvm --params "clang;compiler=clang" --version 17.0.0
+        choco install -y llvm --params "clang;compiler=clang" 
         $env:PATH = "C:\Program Files\LLVM\bin;$env:PATH"
         clang --version
     - name: Set up Python ${{ matrix.python-version }}
