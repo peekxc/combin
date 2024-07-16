@@ -131,8 +131,9 @@ def rank_to_comb(
     assert R.ndim == 1, "Ranks must be one-dimensional array."
     R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
     R = np.array(R, order='K', copy=True) if not R.flags['OWNDATA'] else R # copy if view was given
-    C = np.empty(shape=(len(R), k), dtype=np.uint16)
     n = inverse_choose(np.max(R), k, exact=False) if n is None else n
+    n = max(n, k) # never let n be less than number of things we're choosing
+    C = np.empty(shape=(len(R), k), dtype=np.uint16) ## TODO: change to np.min_scalar_type(n)
     _combinatorial.unrank_combs(R, n, k, colex_order, C)
     C.sort(axis=1) ## TODO: consider adding a flag 
     return C 
@@ -145,9 +146,10 @@ def rank_to_comb(
     #   _combinatorial.unrank_combs(R, n, K, colex_order, C)
     #   C.sort(axis=1) ## TODO: consider adding a flag 
   elif isinstance(R, Iterable):
-    K = np.array([k]*len(R), dtype=np.uint16) if isinstance(k, Integral) else np.array(k).astype(np.uint16)
     R = np.fromiter(R, dtype=np.uint64)
+    K = np.array([k]*len(R), dtype=np.uint16) if isinstance(k, Integral) else np.array(k).astype(np.uint16)
     n = inverse_choose(np.max(R), np.max(K), exact=False) if n is None else n
+    n = max(n, np.max(K)) # never let n be less than number of things we're choosing
     assert len(K) == len(R), "If given as a sequence, k must match the length of the ranks sequence 'R'."
     C = np.zeros(K.sum(), dtype=np.uint16)
     if colex_order:
