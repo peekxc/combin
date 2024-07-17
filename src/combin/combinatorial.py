@@ -81,7 +81,7 @@ def comb_to_rank(
       assert C.ndim == 2, "Can only handle array of dimensionality 2."
       C.sort(axis=1)
       C = np.fliplr(C) if colex_order else C
-      C = np.array(C, order='K', copy=True) if not C.flags['OWNDATA'] else C # copy if a view was given
+      C = np.array(C, order='C', copy=True) if not C.flags['OWNDATA'] else C # copy if a view was given
       assert C.flags['OWNDATA'] and C.flags['C_CONTIGUOUS'] and C.flags['ALIGNED'], "ndarray must not be a view"
       ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
       return ranks
@@ -130,7 +130,7 @@ def rank_to_comb(
   elif isinstance(R, np.ndarray) and isinstance(k, Integral):
     assert R.ndim == 1, "Ranks must be one-dimensional array."
     R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
-    R = np.array(R, order='K', copy=True) if not R.flags['OWNDATA'] else R # copy if view was given
+    R = np.array(R, order='C', copy=True) if not R.flags['OWNDATA'] else R # copy if view was given
     n = inverse_choose(np.max(R), k, exact=False) if n is None else n
     n = max(n, k) # never let n be less than number of things we're choosing
     C = np.empty(shape=(len(R), k), dtype=np.uint16) ## TODO: change to np.min_scalar_type(n)
@@ -139,7 +139,7 @@ def rank_to_comb(
     return C 
     # else: 
     #   assert isinstance(k, np.ndarray), "If R is given as an ndarray and k is a sequence, k must also be an array."
-    #   K = np.array(k, order='K', copy=True) if not k.flags['OWNDATA'] else k # copy if view was given
+    #   K = np.array(k, order='C', copy=True) if not k.flags['OWNDATA'] else k # copy if view was given
     #   assert len(K) == len(R), "If K is given as a sequence, it must have the same length as the ranks sequence 'R'."
     #   n = inverse_choose(np.max(R[K == np.max(K)]), k, exact=False) if n is None else n
     #   C = np.empty(shape=np.sum(K), dtype=np.uint16)
