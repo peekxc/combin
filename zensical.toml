@@ -1,0 +1,79 @@
+[project]
+site_name = "combin"
+site_author = "Matt Piekenbrock"
+site_description = "Lightweight implementation of various combinatorics routines."
+copyright = "Copyright &copy; 2026 Matt Piekenbrock"
+plugins = ["mkapi"]
+extra_css = ["stylesheets/styles.css"]
+extra_javascript = [
+	"https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js",
+	"javascripts/pyodide-setup.js"
+]
+repo_url = "https://github.com/peekxc/combin"
+repo_name = "peekxc/combin"
+nav = [
+  {"Home" = "index.md"},
+  {"Usage" = "usage.md"},
+	{"API Reference" = "api.md"}
+]
+
+
+[project.theme]
+variant = "modern"
+language = "en"
+features = [
+	"content.action.edit",
+  "content.action.view",
+	"content.code.annotate",
+	"content.code.copy",
+	"content.code.select",
+	"content.footnote.tooltips",
+	"content.tabs.link",
+	"content.tooltips",
+	"navigation.footer",
+	"navigation.indexes",
+	"navigation.instant",
+	"navigation.instant.prefetch",
+	"navigation.path",
+	"navigation.sections",
+	"navigation.top", # back to top button
+	"navigation.tracking", # anchor-tracking in ToC
+	"search.highlight",
+	"toc.follow",	# sidebar scrolls to active anchor
+	"toc.integrate",
+]
+palette.primary = "orange"
+palette.accent = "orange"
+
+[project.theme.font]
+text = "Inter"
+code = "Jetbrains Mono"
+
+[project.markdown_extensions.pymdownx]
+inlinehilite = { }
+snippets = { }
+superfences = { }
+highlight.use_pygments = true
+highlight.anchor_linenums = true
+highlight.line_spans = "__span"
+highlight.pygments_lang_class = true
+
+[project.extra]
+generator = false
+
+# [project.markdown_extensions.pymdownx.highlight]
+# anchor_linenums = true
+# line_spans = "__span"
+# pygments_lang_class = true
+# [project.markdown_extensions.pymdownx.inlinehilite]
+# [project.markdown_extensions.pymdownx.snippets]
+# [project.markdown_extensions.pymdownx.superfences]
+
+#[project.theme.icon]
+#logo = "lucide/smile"
+#repo = "lucide/smile"
+
+# [[project.extra.social]]
+#icon = "fontawesome/brands/github"
+# link = "https://github.com/user/repo"
+

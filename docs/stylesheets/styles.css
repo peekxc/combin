@@ -1,0 +1,67 @@
+.mkapi-section-name {
+	font-weight: 500;
+	text-decoration: underline;
+}
+.mkapi-item-name {
+	color: blue;
+}
+
+.language-python{
+	display: inline-block !important;
+	/* color: black !important; */
+}
+
+/* code.md-code__content .token.keyword {
+  color: #92278f !important;
+} */
+
+.md-footer__link {
+	margin-bottom: 0.2rem;
+	margin-top: 0.4rem;
+}
+
+.md-search {
+	max-width: 16rem;
+}
+.md-search__button {
+	width: 16rem;
+}
+
+span#text {
+	color:rgb(0, 128, 0);
+}
+span.token.builtin{
+	color: darkred;
+}
+span.token.keyword {
+  color: purple;
+}
+
+span.token.comment {
+  color: rgb(0, 128, 0);
+}
+
+span.token.string {
+  color: darkorange;
+}
+
+span.token.number {
+  color: rgb(9, 134, 119);
+}
+.run-py-btn {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.py-output {
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-left: 4px solid #2196F3;
+  font-family: monospace;
+  min-height: 20px;
+}
