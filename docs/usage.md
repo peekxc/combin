@@ -10,7 +10,6 @@
   </pre>
   
   <button class="run-py-btn" data-code-id="code-snippet-1">Run Code</button>
-  
   <div id="code-snippet-1-output" class="py-output"></div>
 </div>
 

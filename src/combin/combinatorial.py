@@ -1,14 +1,17 @@
+import math
+from functools import cache
 from itertools import combinations
 from math import ceil, comb, factorial, floor
 from numbers import Integral
-from typing import Container, Iterable, Union
+from typing import Container, Iterable, Literal, Union
 
-import _combinatorial
 import numpy as np
 from more_itertools import collapse, first_true, spy
 
+from .utility import ensure
 
-def _comb_unrank_lex(r: int, n: int, k: int):
+
+def _comb_unrank_lex(r: int, n: int, k: int) -> tuple[int]:
 	result = [0] * k
 	x = 1
 	for i in range(1, k + 1):
@@ -52,7 +55,10 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
 
 
 def comb_to_rank(
-	C: Union[Iterable[tuple], np.ndarray], k: int = None, n: int = None, order: str = ["colex", "lex"]
+	C: Union[Iterable[tuple], np.ndarray],
+	k: int | None = None,
+	n: int | None = None,
+	order: Literal["colex", "lex"] = "colex",
 ) -> np.ndarray:
 	"""Ranks k-combinations to integer ranks in either lexicographic or colexicographical order.
 
@@ -110,19 +116,18 @@ def comb_to_rank(
 
 
 def rank_to_comb(
-	R: Union[np.ndarray, Iterable, Integral], k: Union[int, Iterable], n: int = None, order: str = ["colex", "lex"]
+	R: Union[np.ndarray, Iterable, Integral], k: Union[int, Iterable], n: int | None = None, order: str = ["colex", "lex"]
 ) -> np.ndarray:
-	"""
-	Unranks integer ranks to  k-combinations in either lexicographic or colexicographical order.
+	"""Unranks integer ranks to k-combinations in either lexicographic or colexicographical order.
 
 	Parameters:
-	  R : Iterable of integer ranks
-	  k : size of combination to unrank to, as either an integer or an array of integers.
-	  n : cardinality of the set (only required for lex order)
-	  order : the bijection to use
+	  R: Iterable of integer ranks
+	  k: size of combination to unrank to, as either an integer or an array of integers.
+	  n: cardinality of the set (only required for lex order)
+	  order: the bijection to use
 
 	Returns:
-	  list : k-combinations derived from R
+	  k-combinations derived from `R`.
 	"""
 	n = int(n) if n is not None else None
 	colex_order = order == ["colex", "lex"] or order == "colex"
@@ -167,12 +172,77 @@ def rank_to_comb(
 		raise ValueError(f"Unknown input type for ranks '{type(R)}'")
 
 
+def find_k(r: int, m: int) -> int:
+	r"""Lower bound for determining binomial coefficients.
+
+	Determines an approximate value $r \in \mathbb{N}$ satisfying:
+	$$ C(n-1, k) \leq r < C(n, k) $$
+	In $\approx O(1)$ time.
+
+	Parameters:
+		r: binomial coefficient
+		m: combination tuple size
+
+	Returns:
+		The value $n$ with binomial coefficient $r < C(n,k)$.
+
+	References:
+		- Kruchinin, Vladimir, et al. "Unranking Small Combinations of a Large Set in Co-Lexicographic Order." Algorithms 15.2 (2022): 36.
+	"""
+	ensure(m > 0, "m must be greater than 0")
+	if r == 0:
+		return m - 1
+	if m == 1:
+		return r
+	elif m == 2:
+		# Solving the quadratic: k(k-1)/2 = r
+		return math.ceil((1.0 + math.sqrt(1.0 + 8.0 * r)) / 2.0) - 1
+	elif m == 3:
+		# Approximation for k(k-1)(k-2)/6 = r
+		return math.ceil(math.pow(6.0 * r, 1 / 3)) - 1
+	else:
+		# Default lower bound
+		return m - 1
+
+
+def get_max_vertex(r: int, m: int, n: int, use_lb: bool = True, c_val: int = 0):
+	"""Finds the largest index $w$ satisfying $r >= choose(w, m)$."""
+
+	# Predicate function: is choose(w, m) <= r?
+	def pred(w):
+		return binom(w, m) <= r
+
+	# 1. Calculate Lower Bound
+	k_lb = find_k(r, m) if use_lb else (m - 1)
+
+	# 2. Check early exits (C parameter logic)
+	# Check if the next few integers satisfy the condition to avoid binary search
+	for i in range(1, c_val + 1):
+		if not pred(k_lb + i):
+			return k_lb + i
+
+	# 3. Binary Search in range [k_lb, n]
+	low = k_lb
+	high = n
+	ans = k_lb
+
+	while low <= high:
+		mid = (low + high) // 2
+		if pred(mid):
+			ans = mid
+			low = mid + 1
+		else:
+			high = mid - 1
+
+	return ans + 1
+
+
 def inverse_choose(x: int, k: int, exact: bool = True):
-	"""Inverse binomial coefficient (approximately).
+	r"""Inverse binomial coefficient (approximately).
 
-	This function *attempts* to find the integer _n_ such that binom(n,k) = x, where _binom_ is the binomial coefficient:
+	This function attempts to find the integer _n_ such that binom(n,k) = x, where _binom_ is the binomial coefficient:
 
-	binom(n,k) := n!/(k! * (n-k)!)
+	$$ \mathrm{binom}(n,k) = n! / (k! \cdot (n-k)!) $$
 
 	For k <= 2, a logartihmic numpy-based approach is used and the result is exact.
 	For k > 2 and x <= 10e7, an linear-search is used based on tight bounds and the result is exact.

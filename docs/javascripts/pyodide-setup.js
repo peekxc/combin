@@ -10,9 +10,11 @@ async function main() {
     button.addEventListener("click", async () => {
       // Find the associated code block and output div
       const codeId = button.getAttribute("data-code-id");
+			console.log("Looking for code id: ", codeId);
       const codeElement = document.getElementById(codeId);
+			console.log("Found code element: ", codeElement);
       const outputElement = document.getElementById(codeId + "-output");
-
+			console.log("Found output element: ", outputElement);
       outputElement.innerText = "Running...";
 
       try {

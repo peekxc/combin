@@ -1,3 +1,61 @@
+
+/* mkdocstrings styling */
+.doc-heading {
+	font-size: large !important;
+}
+.md-typeset__table td {
+	padding: 0.5em !important;
+}
+.doc-section-item {
+	margin-bottom: 0.05em !important;
+}
+.doc-function {
+	border: 1px solid lightgray;
+	padding-left: 1.0em;
+	padding-right: 1.0em;
+	padding-bottom: 1.0em;
+}
+h2.doc-heading {
+	margin: 0.6em 0 .64em;
+}
+.doc.doc-contents {
+	padding: 0 !important;
+	margin: 0 !important;
+	border: 0 !important;
+}
+.doc.doc-children {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+.doc-contents ul {
+	margin-bottom: 0;
+	margin-top: 0;
+}
+p:has(> .doc-section-title) {
+	margin-bottom: 0 !important;
+	margin-top: 0 !important;
+}
+.md-nav__list {
+	gap: 0 !important;
+}
+/* Fancier color for operators such as * and |. */
+.doc-signature .o {
+  color: var(--md-code-hl-special-color);
+}
+
+/* Fancier color for constants such as None, True, and False. */
+.doc-signature .kc {
+  color: var(--md-code-hl-constant-color);
+}
+
+/* Fancier color for built-in types (only useful when cross-references are used). */
+.doc-signature .n > a[href^="https://docs.python.org/"][href*="/functions.html#"],
+.doc-signature .n > a[href^="https://docs.python.org/"][href*="/stdtypes.html#"] {
+  color: var(--md-code-hl-constant-color);
+}
+
+/* mkapi styling */
 .mkapi-section-name {
 	font-weight: 500;
 	text-decoration: underline;
