@@ -1,12 +1,14 @@
+"""Contains functions for enumerating, ranking, sampling, and checking permutations."""
+
 import math
-from typing import Iterable
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .utility import ensure
 
 
-def perm_check(p: Iterable[int]) -> bool:
+def perm_check(p: ArrayLike) -> bool:
 	"""Check whether a vector is a valid permutation of 1..n.
 
 	Args:
@@ -24,7 +26,7 @@ def perm_check(p: Iterable[int]) -> bool:
 	return np.unique(a).size == n
 
 
-def perm_enum(n: int) -> int:
+def perm_count(n: int) -> int:
 	"""Return the number of permutations of n elements, n!.
 
 	Args:
@@ -33,12 +35,11 @@ def perm_enum(n: int) -> int:
 	Returns:
 	    n factorial.
 	"""
-	if n < 0:
-		raise ValueError("n must be nonnegative")
+	ensure(n >= 0, "n must be nonnegative")
 	return int(math.factorial(n))
 
 
-def perm_inv(p: np.ndarray) -> np.ndarray:
+def perm_inv(p: ArrayLike) -> np.ndarray:
 	"""Compute the inverse of a 1-based permutation.
 
 	Args:
@@ -48,8 +49,7 @@ def perm_inv(p: np.ndarray) -> np.ndarray:
 	    Array of shape (n,) representing the inverse permutation.
 	"""
 	p = np.asarray(p, int)
-	if not perm_check(p):
-		raise ValueError("illegal permutation")
+	ensure(perm_check(p), "illegal permutation")
 	n = p.size
 	pinv = np.empty(n, int)
 	pinv[p - 1] = np.arange(1, n + 1)
@@ -65,11 +65,10 @@ def perm_lex_rank(p: np.ndarray) -> int:
 	    p: Array of integers of shape (n,), permutation of 1..n.
 
 	Returns:
-	    Integer rank in 0..n!-1.
+	    Integer rank in [0, ..., n!-1].
 	"""
 	p = np.asarray(p, int)
-	if not perm_check(p):
-		raise ValueError("illegal permutation")
+	ensure(perm_check(p), "illegal permutation")
 	n = p.size
 	rank = 0
 	a = p.copy()

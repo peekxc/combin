@@ -1,17 +1,28 @@
 from functools import partial
 from itertools import combinations, product
+
+# print(__file__)
+# def Comb(x: np.ndarray, k: int) -> np.ndarray:
+# 	return np.array([comb(xi, k) for xi in x]).astype(np.int64)
 from math import ceil, comb, floor, sqrt
 from typing import Callable
 
 import numpy as np
 from combin import comb_to_rank, inverse_choose, rank_to_comb
-from combin.combinatorial import _comb_rank_colex, _comb_unrank_colex, _combinatorial
-
-# print(__file__)
+# from combin.combinatorial import _comb_rank_colex, _comb_unrank_colex, _combinatorial
 
 
-def Comb(x: np.ndarray, k: int) -> np.ndarray:
-	return np.array([comb(xi, k) for xi in x]).astype(np.int64)
+def test_find_k():
+	from combin.combinatorial import find_k
+
+	m = 2
+	for r in range(2, 10):
+		k = find_k(r, m)
+		assert r < comb(k, m)
+	# choose(k - 1, m) <= r < choose(k, m)
+
+	# _comb_unrank_lex(0, 10, 2)
+	# pass
 
 
 def test_basic():

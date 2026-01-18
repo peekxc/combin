@@ -1,10 +1,10 @@
 [build-system]
-build-backend = 'mesonpy'
-requires = ["meson-python", "ninja",  "wheel", "numpy", "pybind11"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "combin"
-version = '0.1.7'
+version = '0.1.8'
 readme = "README.md"
 classifiers = [
 	"Intended Audience :: Science/Research",
@@ -15,7 +15,7 @@ classifiers = [
 authors = [
 	{ name = "Matt Piekenbrock", email = "matt.piekenbrock@gmail.com" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
 	"numpy", 
 	"more_itertools"

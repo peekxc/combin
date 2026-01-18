@@ -3,20 +3,31 @@ site_name = "combin"
 site_author = "Matt Piekenbrock"
 site_description = "Lightweight implementation of various combinatorics routines."
 copyright = "Copyright &copy; 2026 Matt Piekenbrock"
-plugins = ["mkapi"]
-extra_css = ["stylesheets/styles.css"]
-extra_javascript = [
-	"https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js",
-	"javascripts/pyodide-setup.js"
+extra_css = [
+	"stylesheets/styles.css",
+	"https=//unpkg.com/katex@0/dist/katex.min.css"
 ]
-repo_url = "https://github.com/peekxc/combin"
+extra_javascript = [
+	# "https=//cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js",
+	# "javascripts/pyodide-setup.js",
+	"javascripts/katex.js",
+	"https=//unpkg.com/katex@0/dist/katex.min.js",
+	"https=//unpkg.com/katex@0/dist/contrib/auto-render.min.js"
+]
+repo_url = "https=//github.com/peekxc/combin"
 repo_name = "peekxc/combin"
 nav = [
   {"Home" = "index.md"},
   {"Usage" = "usage.md"},
-	{"API Reference" = "api.md"}
+	{"API Reference" = [
+		"api/combinations.md", 
+		"api/graycode.md",
+		"api/permutations.md",
+		"api/partitions.md",
+		"api/trees.md", 
+		"api/special.md"
+	]}
 ]
-
 
 [project.theme]
 variant = "modern"
@@ -34,13 +45,12 @@ features = [
 	"navigation.indexes",
 	"navigation.instant",
 	"navigation.instant.prefetch",
-	"navigation.path",
-	"navigation.sections",
+	"navigation.path", # breadcrumbs 
 	"navigation.top", # back to top button
 	"navigation.tracking", # anchor-tracking in ToC
 	"search.highlight",
 	"toc.follow",	# sidebar scrolls to active anchor
-	"toc.integrate",
+	# "toc.integrate", # makes ToC on the let-side 
 ]
 palette.primary = "orange"
 palette.accent = "orange"
@@ -48,6 +58,9 @@ palette.accent = "orange"
 [project.theme.font]
 text = "Inter"
 code = "Jetbrains Mono"
+
+[project.markdown_extensions.toc]
+permalink = true 
 
 [project.markdown_extensions.pymdownx]
 inlinehilite = { }
@@ -57,9 +70,35 @@ highlight.use_pygments = true
 highlight.anchor_linenums = true
 highlight.line_spans = "__span"
 highlight.pygments_lang_class = true
+arithmatex.generic = true
 
 [project.extra]
 generator = false
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+inventories = ["https=//docs.python.org/3/objects.inv", "https=//numpy.org/doc/stable/objects.inv"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+force_inspection = true
+docstring_style = "google"
+inherited_members = false
+show_source = false
+backlinks= "flat"
+annotations_path= "source"
+show_signature_annotations= false
+show_signature_type_parameters= false
+separate_signature= false
+modernize_annotations= true
+signature_crossrefs= true
+docstring_section_style= "list"
+show_if_no_docstring= false
+show_labels= true
+show_root_full_path= true
+show_symbol_type_heading= false
+show_symbol_type_toc= true
+
+
 
 # [project.markdown_extensions.pymdownx.highlight]
 # anchor_linenums = true
@@ -75,5 +114,5 @@ generator = false
 
 # [[project.extra.social]]
 #icon = "fontawesome/brands/github"
-# link = "https://github.com/user/repo"
+# link = "https=//github.com/user/repo"
 

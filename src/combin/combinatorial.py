@@ -1,26 +1,44 @@
+"""Contains functions for enumerating, ranking, sampling, and checking combinations."""
+
 import math
 from functools import cache
 from itertools import combinations
 from math import ceil, comb, factorial, floor
 from numbers import Integral
-from typing import Container, Iterable, Literal, Union
+from typing import Iterable, Literal, Union
 
 import numpy as np
 from more_itertools import collapse, first_true, spy
+from numpy.typing import ArrayLike
 
 from .utility import ensure
 
 
+# https://stackoverflow.com/questions/42138681/faster-numpy-solution-instead-of-itertools-combinations
+def combs(n: int, k: int) -> np.ndarray:
+	"""Generates all C(n,k) combinations of the standard index set."""
+	a = np.ones((k, n - k + 1), dtype=int)
+	a[0] = np.arange(n - k + 1)
+	for j in range(1, k):
+		reps = (n - k + j) - a[j - 1]
+		a = np.repeat(a, reps, axis=1)
+		ind = np.add.accumulate(reps)
+		a[j, ind[:-1]] = 1 - reps[1:]
+		a[j, 0] = j
+		a[j] = np.add.accumulate(a[j])
+	return a.T
+
+
 def _comb_unrank_lex(r: int, n: int, k: int) -> tuple[int]:
-	result = [0] * k
+	result: list[int] = [0] * k
 	x = 1
 	for i in range(1, k + 1):
 		while r >= comb(n - x, k - i):
 			r -= comb(n - x, k - i)
 			x += 1
-		result[i - 1] = x - 1
+		result[i - 1] = int(x - 1)
 		x += 1
-	return tuple(result)
+	return tuple(result)  # type: ignore
 
 
 def _comb_rank_lex(c: Iterable, n: int) -> int:
@@ -41,8 +59,11 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
 
 	This function uses a simple unranking process for testing purposes. For more efficient unranking, see `comb_to_rank`.
 
-	Assuming comb takes $O(min(n-k, k))$ time, this function takes $O(k^2 (n - k))$ time, where n is
+	When $k < n - k$, this function takes $O(k^2 (n - k))$ time, where n is
 	the largest integer satisfying $0 <= r < C(n,k)$.
+
+	Notes:
+		Implements Algorithm 1 from [1].
 	"""
 	c = [0] * k
 	for i in reversed(range(1, k + 1)):  # O(k)
@@ -52,6 +73,11 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
 		c[i - 1] = m - 1
 		r -= comb(m - 1, i)  # comb is O(min(n-k, k)) ~ O(k)
 	return tuple(c)
+
+
+def comb_lex_rank(C: ArrayLike, n: int) -> np.ndarray:
+	combs = np.atleast_2d(C)
+	return np.array([_comb_rank_lex(c, n) for c in combs])
 
 
 def comb_to_rank(
@@ -76,43 +102,41 @@ def comb_to_rank(
 	n = int(n) if n is not None else None
 	assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
 	colex_order = order == ["colex", "lex"] or order == "colex"
-	assert (
-		colex_order or n is not None
-	), "Set cardinality 'n' must be supplied for lexicographical ranking."  # note we need n for colex too!
+	ensure(colex_order or n is not None, "Cardinality 'n' required for lexicographical ranking.")
 	rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
 
-	if isinstance(C, np.ndarray) or isinstance(C, Container):
-		if isinstance(C, np.ndarray):
-			n = (np.max(C) + 1) if n is None else n
-			if C.ndim == 1:
-				assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
-				return rank_comb_(C)
-			assert C.ndim == 2, "Can only handle array of dimensionality 2."
-			C.sort(axis=1)
-			C = np.fliplr(C) if colex_order else C
-			C = np.array(C, order="C", copy=True) if not C.flags["OWNDATA"] else C  # copy if a view was given
-			assert C.flags["OWNDATA"] and C.flags["C_CONTIGUOUS"] and C.flags["ALIGNED"], "ndarray must not be a view"
-			ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
-			return ranks
-		else:
-			el, C = spy(C)
-			if isinstance(el[0], Integral):
-				return rank_comb_(C)
-			assert isinstance(el[0], Container), "Elements must be containers."
-			C = list(C)
-			n = np.max([max(c) for c in C]) + 1 if n is None else n
-			ranks = _combinatorial.rank_combs_unsorted(C, n, colex_order)
-			return ranks
-	elif isinstance(C, Iterable):
-		# return comb_rank_colex(C) if colex_order else comb_rank_lex(C, n)
-		el, C = spy(C)
-		if colex_order:
-			return _comb_rank_colex(C) if isinstance(el[0], Integral) else [_comb_rank_colex(c) for c in C]
-		else:
-			assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-			return _comb_rank_lex(C, n) if isinstance(el[0], Integral) else [_comb_rank_lex(c, n) for c in C]
-	else:
-		raise ValueError(f"Invalid combination type '{type(C)}' supplied")
+	# if isinstance(C, np.ndarray) or isinstance(C, Container):
+	# 	if isinstance(C, np.ndarray):
+	# 		n = (np.max(C) + 1) if n is None else n
+	# 		if C.ndim == 1:
+	# 			assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
+	# 			return rank_comb_(C)
+	# 		assert C.ndim == 2, "Can only handle array of dimensionality 2."
+	# 		C.sort(axis=1)
+	# 		C = np.fliplr(C) if colex_order else C
+	# 		C = np.array(C, order="C", copy=True) if not C.flags["OWNDATA"] else C  # copy if a view was given
+	# 		assert C.flags["OWNDATA"] and C.flags["C_CONTIGUOUS"] and C.flags["ALIGNED"], "ndarray must not be a view"
+	# 		ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
+	# 		return ranks
+	# 	else:
+	# 		el, C = spy(C)
+	# 		if isinstance(el[0], Integral):
+	# 			return rank_comb_(C)
+	# 		assert isinstance(el[0], Container), "Elements must be containers."
+	# 		C = list(C)
+	# 		n = np.max([max(c) for c in C]) + 1 if n is None else n
+	# 		ranks = _combinatorial.rank_combs_unsorted(C, n, colex_order)
+	# 		return ranks
+	# elif isinstance(C, Iterable):
+	# 	# return comb_rank_colex(C) if colex_order else comb_rank_lex(C, n)
+	# 	el, C = spy(C)
+	# 	if colex_order:
+	# 		return _comb_rank_colex(C) if isinstance(el[0], Integral) else [_comb_rank_colex(c) for c in C]
+	# 	else:
+	# 		assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
+	# 		return _comb_rank_lex(C, n) if isinstance(el[0], Integral) else [_comb_rank_lex(c, n) for c in C]
+	# else:
+	# 	raise ValueError(f"Invalid combination type '{type(C)}' supplied")
 
 
 def rank_to_comb(
@@ -172,7 +196,7 @@ def rank_to_comb(
 		raise ValueError(f"Unknown input type for ranks '{type(R)}'")
 
 
-def find_k(r: int, m: int) -> int:
+def find_n(r: int, k: int) -> int:
 	r"""Lower bound for determining binomial coefficients.
 
 	Determines an approximate value $r \in \mathbb{N}$ satisfying:
@@ -189,20 +213,22 @@ def find_k(r: int, m: int) -> int:
 	References:
 		- Kruchinin, Vladimir, et al. "Unranking Small Combinations of a Large Set in Co-Lexicographic Order." Algorithms 15.2 (2022): 36.
 	"""
-	ensure(m > 0, "m must be greater than 0")
+	ensure(k > 0, "m must be greater than 0")
 	if r == 0:
-		return m - 1
-	if m == 1:
+		return k - 1
+	if k == 1:
 		return r
-	elif m == 2:
+	elif k == 2:
 		# Solving the quadratic: k(k-1)/2 = r
 		return math.ceil((1.0 + math.sqrt(1.0 + 8.0 * r)) / 2.0) - 1
-	elif m == 3:
+	elif k == 3:
 		# Approximation for k(k-1)(k-2)/6 = r
 		return math.ceil(math.pow(6.0 * r, 1 / 3)) - 1
 	else:
-		# Default lower bound
-		return m - 1
+		# Default lower bound = k - 1
+		M = np.log(r) / k + np.log(2 * np.pi * k) / (2 * k) + (1 / (12 * k**2)) - 1 / (360 * k**4) - 1
+		N = np.ceil(k * np.exp(M) + (k - 1) / 2)
+		return N
 
 
 def get_max_vertex(r: int, m: int, n: int, use_lb: bool = True, c_val: int = 0):
