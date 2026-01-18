@@ -5,13 +5,14 @@ from functools import cache
 from itertools import combinations
 from math import ceil, comb, factorial, floor
 from numbers import Integral
-from typing import Iterable, Literal, Union
+from typing import Iterable, Iterator, Literal, Union, Sequence, Self
 
 import numpy as np
 from more_itertools import collapse, first_true, spy
 from numpy.typing import ArrayLike
 
 from .utility import ensure
+from .special import binom
 
 
 # https://stackoverflow.com/questions/42138681/faster-numpy-solution-instead-of-itertools-combinations
@@ -29,6 +30,7 @@ def combs(n: int, k: int) -> np.ndarray:
 	return a.T
 
 
+## Element-specific lexicographical ranking function
 def _comb_unrank_lex(r: int, n: int, k: int) -> tuple[int]:
 	result: list[int] = [0] * k
 	x = 1
@@ -41,6 +43,92 @@ def _comb_unrank_lex(r: int, n: int, k: int) -> tuple[int]:
 	return tuple(result)  # type: ignore
 
 
+def comb_unrank_lex(ranks: ArrayLike, n: int, k: int) -> np.ndarray:
+	"""Unranks ranks representing into k-combinations from an n-element set in lexicographical order.
+
+	Args:
+		ranks: array of integer ranks.
+		n: number of elements in the underlying set.
+		k: size of the combinations the ranks represent.
+
+	Returns:
+		integer ranks for each combination.
+
+	Notes:
+		For valid combinations, the resulting combinations are guaranteed to have entries in the range {0, ..., n-1} and
+		to be in bijection with their corresponding ranks, so long as $C(n,k) < 2^64$. The combinations for
+		invalid ranks are undefined. Uses O(n * k) memory.
+	"""
+	ranks = np.atleast_1d(ranks).copy()
+	m = np.size(ranks, axis=0)
+	M = np.arange(m)
+	out = np.empty((m, k), dtype=np.int64)
+	x = np.ones(m, dtype=np.int64)
+	xs_full = np.arange(1, n + 1, dtype=np.int64)
+	for i in range(k + 1):
+		rem = k - i - 1
+		xs = xs_full[: n - rem]
+		B = np.broadcast_to(binom(n - xs, rem), (m, xs.size))
+		S = np.cumsum(B, axis=1)
+		idx = (S > ranks[:, None]).argmax(axis=1)
+		idx = np.where(S[M, idx] <= ranks, xs.size - 1, idx)
+		prev = np.where(idx > 0, S[M, idx - 1], 0).astype(np.int64)
+		ranks -= prev
+		out[:, i] = x + idx - 1
+		x += idx + 1
+	return out if m > 1 else out.ravel()
+
+
+# comb_unrank_lex(np.arange(comb(5,2)), n=5, k=2)
+
+
+def comb_rank_lex(combs: ArrayLike, n: int, N: int | None = None, is_sorted: bool = False) -> np.ndarray:
+	"""Ranks k-combinations from an n-element set in lexicographical order.
+
+	Args:
+		combs: array-like of k-combinations.
+		n: number of elements in the underlying set.
+		N: Binomial coefficient C(n,k), if known.
+		is_sorted: whether the combinations are given in sorted order already. Defaults to False.
+
+	Returns:
+		integer ranks for each combination.
+
+	Notes:
+		For valid combinations, the resulting ranks are guaranteed to be in the range {0, ..., C(n,k) - 1} and
+		to be in bijection with their corresponding combinations, so long as $C(n,k) < 2^64$. The ranks for
+		invalid combinations is undefined. Uses O(|combs| * k) memory.
+	"""
+	C = np.atleast_2d(combs)
+	n, k = int(n), C.shape[1]
+	N = comb(n, k) if N is None else int(N)
+	K = (k - np.argsort(C, axis=1)) if not is_sorted else np.arange(k, 0, -1, dtype=np.int64)
+	val = binom((n - 1) - C, K).sum(axis=1)
+	return (N - 1) - val
+
+
+def comb_rank_colex(combs: ArrayLike, is_sorted: bool = False):
+	"""Ranks k-combinations from an n-element set in colexicographical order.
+
+	Args:
+		combs: array-like of k-combinations.
+		is_sorted: whether the combinations are given in sorted order already. Defaults to False.
+
+	Returns:
+		integer ranks for each combination.
+
+	Notes:
+		For valid combinations, the resulting ranks are guaranteed to be in the range {0, ..., C(n,k) - 1} and
+		to be in bijection with their corresponding combinations, so long as $C(n,k) < 2^64$. The ranks for
+		invalid combinations is undefined. Uses O(|combs| * k) memory.
+	"""
+	C = np.atleast_2d(combs)
+	k = C.shape[1]
+	K = np.arange(k, dtype=np.int64) if is_sorted else np.argsort(C, axis=1) + 1
+	return np.sum(binom(C, K), axis=1)
+
+
+## Dummy version of the above; useful for testing
 def _comb_rank_lex(c: Iterable, n: int) -> int:
 	c = tuple(sorted(c))
 	k = len(c)
@@ -48,6 +136,7 @@ def _comb_rank_lex(c: Iterable, n: int) -> int:
 	return int(comb(n, k) - index - 1)
 
 
+## Dummy version of the above; useful for testing
 def _comb_rank_colex(c: Iterable) -> int:
 	c = tuple(sorted(c))
 	k = len(c)
@@ -64,20 +153,86 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
 
 	Notes:
 		Implements Algorithm 1 from [1].
+
+	References:
+		1. Kruchinin, Vladimir, et al. "Unranking Small Combinations of a Large Set in Co-Lexicographic Order." Algorithms 15.2 (2022): 36.
 	"""
 	c = [0] * k
 	for i in reversed(range(1, k + 1)):  # O(k)
 		m = i
-		while r >= comb(m, i):  # O(n) as min comparisons == n − m + 1 (when i = m), max comparisons is n (when i = 1);
+		## O(n) as min comparisons == n − m + 1 (when i = m), max comparisons is n (when i = 1);
+		while r >= comb(m, i):
 			m += 1
 		c[i - 1] = m - 1
 		r -= comb(m - 1, i)  # comb is O(min(n-k, k)) ~ O(k)
 	return tuple(c)
 
 
-def comb_lex_rank(C: ArrayLike, n: int) -> np.ndarray:
-	combs = np.atleast_2d(C)
-	return np.array([_comb_rank_lex(c, n) for c in combs])
+def comb_unrank_colex(ranks: ArrayLike, k: int) -> np.ndarray:
+	"""Colex unranking.
+
+	Args:
+		ranks: scalar or array of ranks
+		k: size of the combinations.
+
+	Returns:
+		array of integer ranks.
+	"""
+	ranks = np.atleast_1d(ranks).copy()
+	vals = np.empty((ranks.size, k), dtype=np.int64)
+
+	max_rank = np.max(ranks)
+	for i in reversed(range(1, k + 1)):
+		# Candidate n values; upper bound safe over all ranks
+		ms = np.arange(i, max_rank + i + 1, dtype=np.int64)  ## TODO: reduce space complexity using find_n
+
+		## Broadcast binomial coefficient table
+		B = np.broadcast_to(binom(ms[None, :], i), (ranks.size, ms.size))
+		mask = B > ranks[:, None]
+
+		# Take the first m where comb(m, i) > r
+		m_choice = ms[mask.argmax(axis=1)]
+		vals[:, i - 1] = m_choice - 1
+		ranks -= binom(m_choice - 1, i).astype(np.int64)
+
+	return vals.ravel() if ranks.size == 1 else vals
+
+
+class CombinationIterator(Iterator):
+	def __init__(self, seq: Sequence, k: int, batch_size: int = 1024):
+		self.seq = np.atleast_1d(seq)
+		self.n = np.size(self.seq, axis=0)
+		self.k = k
+		self._rank = 0
+		self._N = comb(self.n, self.k)
+		self._b = batch_size
+
+	def __iter__(self) -> Self:
+		return self
+
+	def __next__(self) -> np.ndarray:
+		if self._rank >= self._N:
+			raise IndexError()
+		ranks = np.arange(self._rank, min(self._rank + self._b, self._N))
+		indices = comb_unrank_colex(ranks, self.k)
+		return self.seq[indices]
+
+	def __repr__(self) -> str:
+		msg = f"CombinationIterator over C({self.n},{self.k}) combinations"
+		return msg
+
+
+class Combinations(Iterable):
+	def __init__(self, seq: Sequence, k: int):  # support __getitem__
+		self.seq = np.array(seq)
+		self.k = k
+
+	def __getitem__(self, key: int | slice) -> np.ndarray:
+		pass
+
+	# def batched(self, batch_size: int = 1024) :
+	# 	unrank_comb_lex
+	# 	# unrank_comb_lex()  # vectorized
 
 
 def comb_to_rank(
