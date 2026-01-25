@@ -6,7 +6,9 @@ def binom(n: ArrayLike, k: ArrayLike, out: np.ndarray | None = None) -> np.ndarr
 	r"""Binomial coefficient.
 
 	Computes the binomial coefficient $C(n,k)$ given by:
-	$$ {n \choose 2} = \frac{n!}{k!(n-k)!} = { n - 1 \choose k - 1} { n - 1 \choose k} $$
+
+	$$ {n \choose k} = \frac{n!}{k!(n-k)!} = { n - 1 \choose k - 1} + { n - 1 \choose k} $$
+	
 	All parameters `n` and `k` are broadcasted appropriately. Uses $O(|n| \cdot |k|)$ memory.
 	Uses the multiplicative formula to compute the coefficients.
 
@@ -27,6 +29,7 @@ def binom(n: ArrayLike, k: ArrayLike, out: np.ndarray | None = None) -> np.ndarr
 	"""
 	n, k = np.asarray(n), np.asarray(k)
 	k = np.broadcast_to(k, n.shape)
+	
 	# k = np.minimum(k, n - k)
 	# k = np.clip(k, 0, n)
 	# i = np.arange(1, k.max() + 1)

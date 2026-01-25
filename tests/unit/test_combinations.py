@@ -1,7 +1,7 @@
 from itertools import combinations
 
 import numpy as np
-from combin.combinatorial import _comb_unrank_lex, comb_lex_rank, combs, find_n
+from combin.combinatorial import combs, find_n
 from combin.special import binom
 
 
@@ -22,6 +22,27 @@ def test_comb_lex_rank():
 def test_comb_colex_rank():
 	np.unique(comb_rank_colex(C))
 
+
+def test_find_n():
+	from itertools import product
+	from math import comb
+	from combin.special import binom
+	from combin.combinatorial import find_n
+	for n, k in product(np.arange(1, 1_500, 5), range(8)):
+		# R = np.arange(0, comb(n,k))
+		N = comb(n, k)
+		R = np.arange(0, N, step=max(1, N // 1_000))
+		n_est = np.array([find_n(r, k) for r in R])
+		## "however, the obtained value of n must not be greater than 
+		##  the true value of the solution of this inequality"
+		
+		## Ensure find_n(r,k) <= n for all reasonable C(n,k)
+		assert np.all(n_est <= n), f"estimated n ({n_est}) > {n}"
+
+		# R_lb = binom(n_est-1, k)
+		# R_ub = binom(n_est+0, k)
+		
+		# assert np.all((R_lb <= R) & (R <= R_ub))
 
 # %%
 comb_rank_lex(np.arange(45), n=10, k=2)

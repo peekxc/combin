@@ -5,14 +5,14 @@ site_description = "Lightweight implementation of various combinatorics routines
 copyright = "Copyright &copy; 2026 Matt Piekenbrock"
 extra_css = [
 	"stylesheets/styles.css",
-	"https=//unpkg.com/katex@0/dist/katex.min.css"
+	"https://unpkg.com/katex@0/dist/katex.min.css"
 ]
 extra_javascript = [
 	# "https=//cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js",
 	# "javascripts/pyodide-setup.js",
 	"javascripts/katex.js",
-	"https=//unpkg.com/katex@0/dist/katex.min.js",
-	"https=//unpkg.com/katex@0/dist/contrib/auto-render.min.js"
+	"https://unpkg.com/katex@0/dist/katex.min.js",
+	"https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"
 ]
 repo_url = "https=//github.com/peekxc/combin"
 repo_name = "peekxc/combin"
@@ -77,7 +77,7 @@ generator = false
 
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
-inventories = ["https=//docs.python.org/3/objects.inv", "https=//numpy.org/doc/stable/objects.inv"]
+inventories = ["https://docs.python.org/3/objects.inv", "https://numpy.org/doc/stable/objects.inv", "http://docs.scipy.org/doc/scipy/objects.inv"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
 force_inspection = true
