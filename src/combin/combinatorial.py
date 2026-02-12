@@ -57,7 +57,7 @@ def comb_unrank_lex(ranks: ArrayLike, n: int, k: int) -> np.ndarray:
 		to be in bijection with their corresponding ranks, so long as $C(n,k) < 2^64$. The combinations for
 		invalid ranks are undefined. Uses O(n * k) memory.
 	"""
-	ranks = np.atleast_1d(ranks).copy()
+	ranks = np.atleast_1d(ranks).astype(np.int64).copy()
 	m = np.size(ranks, axis=0)
 	M = np.arange(m)
 	out = np.empty((m, k), dtype=np.int64)
@@ -162,6 +162,44 @@ def _comb_unrank_colex(r: int, k: int) -> tuple:
 		r -= comb(m - 1, i)  # comb is O(min(n-k, k)) ~ O(k)
 	return tuple(c)
 
+def comb_unrank_colex_findn(ranks: ArrayLike, k: int) -> np.ndarray:
+	"""Colex unranking using a find_n-based bound for the candidate table.
+
+	This keeps vectorized updates, but shrinks the temporary B table width by
+	using `find_n` to locate a tight upper limit on candidate m values.
+	"""
+	R = np.array(ranks, dtype=np.int64, copy=True, ndmin=1)
+	comb_out = np.empty((R.size, k), dtype=np.int64)
+	if R.size == 0:
+		return comb_out
+
+	for i in reversed(range(1, k + 1)):
+		r_max = int(np.max(R))
+		m_hi = max(i, int(find_n(r_max, i)) + 1)
+		while comb(m_hi, i) <= r_max:
+			m_hi += 1
+
+		ms = np.arange(i, m_hi + 1, dtype=np.int64)
+		B = np.broadcast_to(binom(ms[None, :], i), (R.size, ms.size))
+		mask = B > R[:, None]
+		m_choice = ms[mask.argmax(axis=1)]
+		comb_out[:, i - 1] = m_choice - 1
+		R -= binom(m_choice - 1, i).astype(np.int64)
+
+	return comb_out.ravel() if np.size(ranks) == 1 else comb_out
+
+
+def comb_unrank_lex_findn(ranks: ArrayLike, n: int, k: int) -> np.ndarray:
+	"""Vectorized lex unranking that uses the find_n-bounded colex backend.
+
+	Uses the lex/colex dual relation q = C(n,k) - 1 - r.
+	"""
+	R = np.array(ranks, dtype=np.int64, copy=True, ndmin=1)
+	N = comb(n, k)
+	Q = (N - 1) - R
+	B = np.atleast_2d(comb_unrank_colex_findn(Q, k))
+	out = ((n - 1) - B[:, ::-1]).astype(np.int64, copy=False)
+	return out if np.size(ranks) > 1 else out.ravel()
 
 def comb_unrank_colex(ranks: ArrayLike, k: int) -> np.ndarray:
 	"""Colex unranking.
@@ -235,122 +273,6 @@ class Combinations(Iterable):
 		pass
 		# unrank_comb_lex
 		# unrank_comb_lex()  # vectorized
-
-
-def comb_to_rank(
-	C: Union[Iterable[tuple], np.ndarray],
-	k: int | None = None,
-	n: int | None = None,
-	order: Literal["colex", "lex"] = "colex",
-) -> np.ndarray:
-	"""Ranks k-combinations to integer ranks in either lexicographic or colexicographical order.
-
-	Parameters:
-	  C: combination, Iterable of combinations, or array of integers.
-	  k: size of each combination (broadcastable). If not supplied, 'C' must be 2-dimensional.
-	  n: cardinality of the set (lex order only).
-	  order: the bijection to use.
-
-	Returns:
-	  integer ranks of the combinations.
-
-	From: Unranking Small Combinations of a Large Set in Co-Lexicographic Order
-	"""
-	n = int(n) if n is not None else None
-	assert isinstance(C, np.ndarray) or isinstance(C, Iterable), "Supply numpy array for vectorized version"
-	colex_order = order == ["colex", "lex"] or order == "colex"
-	ensure(colex_order or n is not None, "Cardinality 'n' required for lexicographical ranking.")
-	rank_comb_ = lambda c: _comb_rank_colex(c) if colex_order else _comb_rank_lex(c, n)
-
-	# if isinstance(C, np.ndarray) or isinstance(C, Container):
-	# 	if isinstance(C, np.ndarray):
-	# 		n = (np.max(C) + 1) if n is None else n
-	# 		if C.ndim == 1:
-	# 			assert k is None or isinstance(k, Integral), "array based ranking not supported yet"
-	# 			return rank_comb_(C)
-	# 		assert C.ndim == 2, "Can only handle array of dimensionality 2."
-	# 		C.sort(axis=1)
-	# 		C = np.fliplr(C) if colex_order else C
-	# 		C = np.array(C, order="C", copy=True) if not C.flags["OWNDATA"] else C  # copy if a view was given
-	# 		assert C.flags["OWNDATA"] and C.flags["C_CONTIGUOUS"] and C.flags["ALIGNED"], "ndarray must not be a view"
-	# 		ranks = _combinatorial.rank_combs_sorted(C, n, colex_order)
-	# 		return ranks
-	# 	else:
-	# 		el, C = spy(C)
-	# 		if isinstance(el[0], Integral):
-	# 			return rank_comb_(C)
-	# 		assert isinstance(el[0], Container), "Elements must be containers."
-	# 		C = list(C)
-	# 		n = np.max([max(c) for c in C]) + 1 if n is None else n
-	# 		ranks = _combinatorial.rank_combs_unsorted(C, n, colex_order)
-	# 		return ranks
-	# elif isinstance(C, Iterable):
-	# 	# return comb_rank_colex(C) if colex_order else comb_rank_lex(C, n)
-	# 	el, C = spy(C)
-	# 	if colex_order:
-	# 		return _comb_rank_colex(C) if isinstance(el[0], Integral) else [_comb_rank_colex(c) for c in C]
-	# 	else:
-	# 		assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-	# 		return _comb_rank_lex(C, n) if isinstance(el[0], Integral) else [_comb_rank_lex(c, n) for c in C]
-	# else:
-	# 	raise ValueError(f"Invalid combination type '{type(C)}' supplied")
-
-
-# def rank_to_comb(
-# 	R: Union[np.ndarray, Iterable, Integral], k: Union[int, Iterable], n: int | None = None, order: str = ["colex", "lex"]
-# ) -> np.ndarray:
-# 	"""Unranks integer ranks to k-combinations in either lexicographic or colexicographical order.
-
-# 	Parameters:
-# 	  R: Iterable of integer ranks
-# 	  k: size of combination to unrank to, as either an integer or an array of integers.
-# 	  n: cardinality of the set (only required for lex order)
-# 	  order: the bijection to use
-
-# 	Returns:
-# 	  k-combinations derived from `R`.
-# 	"""
-# 	n = int(n) if n is not None else None
-# 	colex_order = order == ["colex", "lex"] or order == "colex"
-# 	assert colex_order or n is not None, "Set cardinality 'n' must be supplied for lexicographical ranking."
-# 	if isinstance(R, Integral):
-# 		return _comb_unrank_colex(R, k=k) if colex_order else _comb_unrank_lex(R, k=k, n=n)
-# 	elif isinstance(R, np.ndarray) and isinstance(k, Integral):
-# 		assert R.ndim == 1, "Ranks must be one-dimensional array."
-# 		R = R.astype(np.uint64) if (R.dtype != np.uint64) else R
-# 		R = np.array(R, order="C", copy=True) if not R.flags["OWNDATA"] else R  # copy if view was given
-# 		n = inverse_choose(np.max(R), k, exact=False) if n is None else n
-# 		n = max(n, k)  # never let n be less than number of things we're choosing
-# 		C = np.empty(shape=(len(R), k), dtype=np.uint16)  ## TODO: change to np.min_scalar_type(n)
-# 		_combinatorial.unrank_combs(R, n, k, colex_order, C)
-# 		C.sort(axis=1)  ## TODO: consider adding a flag
-# 		return C
-		# else:
-		#   assert isinstance(k, np.ndarray), "If R is given as an ndarray and k is a sequence, k must also be an array."
-		#   K = np.array(k, order='C', copy=True) if not k.flags['OWNDATA'] else k # copy if view was given
-		#   assert len(K) == len(R), "If K is given as a sequence, it must have the same length as the ranks sequence 'R'."
-		#   n = inverse_choose(np.max(R[K == np.max(K)]), k, exact=False) if n is None else n
-		#   C = np.empty(shape=np.sum(K), dtype=np.uint16)
-		#   _combinatorial.unrank_combs(R, n, K, colex_order, C)
-		#   C.sort(axis=1) ## TODO: consider adding a flag
-	# elif isinstance(R, Iterable):
-	# 	R = np.fromiter(R, dtype=np.uint64)
-	# 	K = np.array([k] * len(R), dtype=np.uint16) if isinstance(k, Integral) else np.array(k).astype(np.uint16)
-	# 	n = inverse_choose(np.max(R), np.max(K), exact=False) if n is None else n
-	# 	n = max(n, np.max(K))  # never let n be less than number of things we're choosing
-	# 	assert len(K) == len(R), "If given as a sequence, k must match the length of the ranks sequence 'R'."
-	# 	C = np.zeros(K.sum(), dtype=np.uint16)
-	# 	if colex_order:
-	# 		_combinatorial.unrank_combs_k(R, n, K, K.max(), True, C)
-	# 		return np.array_split(C, np.cumsum(K)[:-1])
-	# 		# return [_comb_unrank_colex(r, k) for r,k in zip(R,K)]
-	# 	else:
-	# 		assert n is not None, "Cardinality of set must be supplied for lexicographical ranking"
-	# 		_combinatorial.unrank_combs_k(R, n, K, K.max(), False, C)
-	# 		return np.array_split(C, np.cumsum(K)[:-1])
-	# 		# return [_comb_unrank_lex(r, n, k) for r,k in zip(R,K)]
-	# else:
-	# 	raise ValueError(f"Unknown input type for ranks '{type(R)}'")
 
 
 def find_n(r: int, k: int) -> int:
@@ -489,3 +411,5 @@ def inverse_choose(x: int, k: int, exact: bool = True):
 				if comb(n2, k) == x:
 					return n2
 				raise ValueError(f"Failed to invert C(n,{k}) = {x}")
+
+

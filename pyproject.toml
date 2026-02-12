@@ -22,11 +22,12 @@ dependencies = [
 ]
 license = {file = "LICENSE"}
 
-[project.optional-dependencies]
-test = ["pytest", "pytest-cov", "pytest-benchmark", "coverage"]
+[dependency_groups]
+test = ["pytest", "coverage"]
 
-[tool.meson-python.args]
-setup = ['--default-library=static']
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+addopts = ["-p no:anyio -p no:pastebin -p no:nose -p no:doctest"]
 
 [tool.cibuildwheel]
 test-requires = ["pytest", "pytest-cov", "pytest-benchmark", "coverage"]
