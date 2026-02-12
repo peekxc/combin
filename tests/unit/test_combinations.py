@@ -8,7 +8,7 @@ from combin.combinatorial import (
     comb_rank_colex,
     comb_unrank_colex,
     comb_unrank_lex,
-    comb_unrank_lex_findn,
+    comb_unrank_lex_findn
 )
 from combin.special import binom
 

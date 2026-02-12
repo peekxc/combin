@@ -27,7 +27,7 @@ test = ["pytest", "coverage"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
-addopts = ["-p no:anyio -p no:pastebin -p no:nose -p no:doctest"]
+addopts = ["-p", "no:anyio", "-p", "no:pastebin", "-p", "no:nose", "-p", "no:doctest"]
 
 [tool.cibuildwheel]
 test-requires = ["pytest", "pytest-cov", "pytest-benchmark", "coverage"]
