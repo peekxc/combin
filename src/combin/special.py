@@ -28,28 +28,38 @@ def binom(n: ArrayLike, k: ArrayLike, out: np.ndarray | None = None) -> np.ndarr
                     <div id="code-snippet-1-output" class="py-output"></div>
             </div>
     """
-    n, k = np.asarray(n), np.asarray(k)
-    k = np.broadcast_to(k, n.shape)
+    n_arr, k_arr = np.broadcast_arrays(np.asarray(n), np.asarray(k))
+    if out is None:
+        out_arr = np.zeros(n_arr.shape, dtype=np.uint64)
+    else:
+        if out.shape != n_arr.shape:
+            raise ValueError("out must have same broadcasted shape as n and k")
+        out_arr = out
+        out_arr.fill(0)
 
-    # k = np.minimum(k, n - k)
-    # k = np.clip(k, 0, n)
-    # i = np.arange(1, k.max() + 1)
-    # terms = np.where(i <= k[..., None], (n[..., None] - i + 1) / i, 1.0)
-    # result = np.rint(np.prod(terms, axis=-1)).astype(np.uint64)
-
-    ## Keep initialize to zero, as out-of-bounds like C(0,k) = 0
-    out = np.zeros_like(n, dtype=np.uint64)
-    valid = (k >= 0) & (k <= n)
+    valid = (n_arr >= 0) & (k_arr >= 0) & (k_arr <= n_arr)
     if not np.any(valid):
-        return out
-    nv = n[valid]
-    kv = np.minimum(k[valid], nv - k[valid])
-    i = np.arange(1, kv.max() + 1)
-    terms = np.where(i <= kv[..., None], (nv[..., None] - i + 1) / i, 1.0)
-    out[valid] = np.rint(np.prod(terms, axis=-1)).astype(np.uint64)
+        return out_arr
 
-    # return result if np.size(result) > 1 else result.item()
-    return out
+    nv = n_arr[valid].astype(np.int64, copy=False)
+    kv_raw = k_arr[valid].astype(np.int64, copy=False)
+    kv = np.minimum(kv_raw, nv - kv_raw)
+
+    res = np.ones(nv.shape[0], dtype=np.uint64)
+    for kk in np.unique(kv):
+        if kk == 0:
+            continue
+        mask = kv == kk
+        nk = nv[mask].astype(np.uint64, copy=False)
+        r = np.ones(nk.shape[0], dtype=np.uint64)
+        kk_u64 = np.uint64(kk)
+        for j in range(1, int(kk) + 1):
+            j_u64 = np.uint64(j)
+            r = (r * (nk - kk_u64 + j_u64)) // j_u64
+        res[mask] = r
+
+    out_arr[valid] = res
+    return out_arr
 
 
 def binom_int_exact(
