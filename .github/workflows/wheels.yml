@@ -22,7 +22,7 @@ jobs:
         cibw_python: ["cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp312-*"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: true 
@@ -92,7 +92,7 @@ jobs:
         cibw_arch: ["x86_64", "arm64"]  # TODO: add "universal2" once a universal2 libomp is available
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: true
@@ -131,7 +131,7 @@ jobs:
         cibw_arch: ["x86_64"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -167,7 +167,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
       with:
         submodules: true 
     
